@@ -1,5 +1,13 @@
 (ns deeto.core)
 
+(defn ser-de-ser [x]
+  {:post [(java.util.Arrays/deepEquals (into-array Object [x]) (into-array Object [%]))]}
+  (if (nil? x) nil
+      (let [baos (java.io.ByteArrayOutputStream.)
+            oos (java.io.ObjectOutputStream. baos)]
+        (.writeObject oos x)
+        (.readObject (java.io.ObjectInputStream. (java.io.ByteArrayInputStream. (.toByteArray baos)))))))
+
 (defn reflect-on
   "Inspects via reflection all methods of the DTO `clazz` and
   determines the _properties_ by looking at getter and setter methods.
@@ -91,8 +99,41 @@
           (invoke [the-proxy the-method the-args]
             (handler-fn the-method the-args)))))))
 
+(defn get-state
+  "Returns internal state (map) of Deeto proxy."
+
+  [p]
+  (.invoke (java.lang.reflect.Proxy/getInvocationHandler p)
+           nil nil nil))
+
+(defn handle-equals [state the-method the-args]
+  (let [the-args (into [] the-args)
+        other (first the-args)]
+    (cond 
+      (not= 1 (count the-args)) (throw (ex-info "Not a valid equals method" {:the-method the-method :the-args the-args}))
+      (nil? other) false
+      :else 
+      #_
+      (let [s1 (into-array Object (seq @state))
+            s2 (into-array Object (seq (get-state other)))]
+        (println "states=" (into [] s1) (into [] s2))
+        (java.util.Arrays/deepEquals s1 s2))
+      ;; #_
+      (reduce (fn [v [p v1 v2]]
+                {:pre [(or (println "compare" [p v1 v2]) true)]
+                 :post [(or (println "compare" [p v1 v2] " -> " %) true)]}
+                (if-not 
+                    (java.util.Arrays/deepEquals (into-array Object [v1]) (into-array Object [v2]))
+                  (reduced false)
+                  true))
+              true 
+              (map (fn [[p1 v1] [p2 v2]]
+                     [p1 v1 v2])
+                   @state (get-state other))))))
+
 (defn handler [clazz properties state the-method the-args]
   ;; (println "call" the-method the-args)
+  ;; Special access to @state via null method (see get-state)
   (if-not the-method @state
           (let [method-name (.getName the-method)
                 get-property (-> (re-matches #"get(.+)" method-name) second)
@@ -100,15 +141,17 @@
                 return-type (.getReturnType the-method)
                 parameter-types (into [] (.getParameterTypes the-method))]
             (cond
-              get-property (@state get-property)
-              set-property (swap! state assoc set-property (first the-args))
-              (= "toString" method-name) (str @state)
-      
-              (= "equals" method-name)
-              (= @state (.invoke (java.lang.reflect.Proxy/getInvocationHandler (first the-args))
-                                 nil nil nil))
-              (= "hashCode" method-name) 0
               
+              ;; TBD: return clone!
+              get-property (ser-de-ser (@state get-property))
+              
+              set-property (swap! state assoc set-property (ser-de-ser (first the-args)))
+              
+              (= "toString" method-name) (str @state)
+              (= "equals" method-name) (handle-equals state the-method the-args)
+              (= "hashCode" method-name) (java.util.Arrays/deepHashCode (into-array Object (vals @state)))
+
+              ;; TBD: create clone of vals
               (= "clone" method-name)
               (make-proxy clazz (partial #'handler clazz properties (atom @state)))
               
