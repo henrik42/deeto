@@ -4,7 +4,9 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
 
-  :resource-paths ["C:/henrik/workspaces/deeto/deeto/bin"]
+  :java-source-paths ["java/test"]
+
+  ;; :resource-paths ["C:/henrik/workspaces/deeto/deeto/bin"]
   
   :dependencies [[org.clojure/clojure "1.8.0"]]
 

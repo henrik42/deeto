@@ -1,8 +1,5 @@
 (ns deeto.core)
 
-(def my-dto-class
-  (Class/forName "deeto.example.MyDto"))
-
 (defn reflect-on
   "Inspects via reflection all methods of the DTO `clazz` and
   determines the _properties_ by looking at getter and setter methods.
@@ -74,17 +71,25 @@
              :parameter-types (into [] (.getParameterTypes m))}))
         (.getMethods clazz))))
 
+(declare handler)
+
 (defn make-proxy
-  [proxy-type handler-fn]
-  (let [pt (if (vector? proxy-type)
-             (into-array proxy-type)
-             (into-array [proxy-type]))]
-    (java.lang.reflect.Proxy/newProxyInstance
-     (.getClassLoader (first pt)) 
-     pt
-     (proxy [java.lang.reflect.InvocationHandler] []
-       (invoke [the-proxy the-method the-args]
-         (handler-fn the-method the-args))))))
+  ([proxy-type]
+     (let [properties (reflect-on proxy-type)
+           state (atom (into (sorted-map)
+                             (map #(-> [% nil]) (keys properties))))]
+       (make-proxy proxy-type
+                   (partial #'handler proxy-type properties state))))
+  ([proxy-type handler-fn]
+     (let [pt (if (vector? proxy-type)
+                (into-array proxy-type)
+                (into-array [proxy-type]))]
+       (java.lang.reflect.Proxy/newProxyInstance
+        (.getClassLoader (first pt)) 
+        pt
+        (proxy [java.lang.reflect.InvocationHandler] []
+          (invoke [the-proxy the-method the-args]
+            (handler-fn the-method the-args)))))))
 
 (defn handler [clazz properties state the-method the-args]
   ;; (println "call" the-method the-args)
@@ -113,26 +118,11 @@
                                             :the-args (into [] the-args)}))))))
 
 
-;; #_
-(def my-proxy
-  (let [properties (reflect-on my-dto-class)
-        state (atom (into {}
-                          (map #(-> [% nil]) (keys properties))))]
-    (make-proxy my-dto-class
-                (partial #'handler my-dto-class properties state))))
-
-(def my-proxy-b
-  (let [properties (reflect-on my-dto-class)
-        state (atom (into {}
-                          (map #(-> [% nil]) (keys properties))))]
-    (make-proxy my-dto-class
-                (partial #'handler my-dto-class properties state))))
-
-
-
+#_
 (defprotocol Factory
   (newInstance [this]))
 
+#_
 (defn factory-for [class]
   (reify Factory
     (newInstance [this]
