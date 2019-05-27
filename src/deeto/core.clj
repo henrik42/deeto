@@ -1,6 +1,7 @@
 (ns deeto.core)
 
-(def my-dto-class (Class/forName "deeto.example.MyDto"))
+(def my-dto-class
+  (Class/forName "deeto.example.MyDto"))
 
 (defn reflect-on
   "Inspects via reflection all methods of the DTO `clazz` and
@@ -61,7 +62,7 @@
                                       :else method-name))}))
        ;; Method is non-getter/setter (like equals, hashCode, clone, readResolve,...)
        (do
-         (println m)
+         (println "no getter/setter" m)
          res)))
    {} ;; Start value is an empty map
    (map (fn [m] ;; seq of method-map containing preprocessed things about each method
@@ -84,6 +85,50 @@
      (proxy [java.lang.reflect.InvocationHandler] []
        (invoke [the-proxy the-method the-args]
          (handler-fn the-method the-args))))))
+
+(defn handler [clazz properties state the-method the-args]
+  ;; (println "call" the-method the-args)
+  (if-not the-method @state
+          (let [method-name (.getName the-method)
+                get-property (-> (re-matches #"get(.+)" method-name) second)
+                set-property (-> (re-matches #"set(.+)" method-name) second)
+                return-type (.getReturnType the-method)
+                parameter-types (into [] (.getParameterTypes the-method))]
+            (cond
+              get-property (@state get-property)
+              set-property (swap! state assoc set-property (first the-args))
+              (= "toString" method-name) (str @state)
+      
+              (= "equals" method-name)
+              (= @state (.invoke (java.lang.reflect.Proxy/getInvocationHandler (first the-args))
+                                 nil nil nil))
+              (= "hashCode" method-name) 0
+              
+              (= "clone" method-name)
+              (make-proxy clazz (partial #'handler clazz properties (atom @state)))
+              
+              :else (throw (ex-info "oops" {:properties properties
+                                            :state state
+                                            :the-method the-method
+                                            :the-args (into [] the-args)}))))))
+
+
+;; #_
+(def my-proxy
+  (let [properties (reflect-on my-dto-class)
+        state (atom (into {}
+                          (map #(-> [% nil]) (keys properties))))]
+    (make-proxy my-dto-class
+                (partial #'handler my-dto-class properties state))))
+
+(def my-proxy-b
+  (let [properties (reflect-on my-dto-class)
+        state (atom (into {}
+                          (map #(-> [% nil]) (keys properties))))]
+    (make-proxy my-dto-class
+                (partial #'handler my-dto-class properties state))))
+
+
 
 (defprotocol Factory
   (newInstance [this]))
