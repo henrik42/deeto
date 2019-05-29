@@ -190,7 +190,7 @@
               (= "toString" method-name) (str @state)
               (= "equals" method-name) (and
                                         ;; classes match?
-                                        (.equals clazz nil)
+                                        ;; (.equals clazz nil)
                                         (handle-equals state the-method the-args))
               (= "hashCode" method-name) (java.util.Arrays/deepHashCode (into-array Object (vals @state)))
 

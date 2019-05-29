@@ -5,11 +5,6 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
 
   :java-source-paths ["java/test"]
-
-  ;; :resource-paths ["C:/henrik/workspaces/deeto/deeto/bin"]
-  
+  :aot [deeto.java-api]
   :dependencies [[org.clojure/clojure "1.8.0"]]
-
-  :plugins [[lein-swank "1.4.5"]]
-
-  )
+  :plugins [[lein-swank "1.4.5"]])
