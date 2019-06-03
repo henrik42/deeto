@@ -1,5 +1,8 @@
 # Deeto
 
+__!!!!!!!! THIS IS WORK IN PROGRESS !!!!!!!__
+
+
 __A Java dynamic proxy factory for interface-typed DTOs__.
 
 Deeto is a Clojure [1] library for Java developers. With Deeto you can
