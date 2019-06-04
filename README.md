@@ -44,13 +44,13 @@ factory will return a new instance `i` with the following properties:
 __TBD__ Say something about `P`'s serialized form and how it can pass
   process boundaries.
 
-[1] `https://clojure.org/`  
-[2] `https://en.wikipedia.org/wiki/Data_transfer_object`  
-[3] `https://martinfowler.com/bliki/LocalDTO.html`  
-[4] `https://www.oracle.com/technetwork/articles/java/javareflection-1536171.html`  
-[5] `https://en.wikipedia.org/wiki/Factory_method_pattern`  
-[6] `https://docs.oracle.com/javase/8/docs/technotes/guides/reflection/proxy.html`  
-[7] `https://www.journaldev.com/17129/java-deep-copy-object`  
+[1] https://clojure.org/  
+[2] https://en.wikipedia.org/wiki/Data_transfer_object  
+[3] https://martinfowler.com/bliki/LocalDTO.html  
+[4] https://www.oracle.com/technetwork/articles/java/javareflection-1536171.html  
+[5] https://en.wikipedia.org/wiki/Factory_method_pattern  
+[6] https://docs.oracle.com/javase/8/docs/technotes/guides/reflection/proxy.html  
+[7] https://www.journaldev.com/17129/java-deep-copy-object  
 
 ## Properties
 
