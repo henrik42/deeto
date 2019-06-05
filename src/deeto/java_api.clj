@@ -1,13 +1,21 @@
 (ns deeto.java-api
+  (:require [deeto.core :as c])
   (:gen-class
-   :init init
-   ;; :state state
-   :name deeto.Deeto)
-  #_
-  (:gen-interface
-   :name deeto.Factory
-   :methods [[make [Class] Object]]))
+   :name deeto.Deeto
+   :implements [deeto.Factory]
+   :methods [^:static [factory [] deeto.Factory]
+             #_ [newInstance [Class] Object]]))
 
-(defn -init [&_])
+(def the-factory
+  (deeto.Deeto.))
+
+(defn -newInstance [this clazz]
+  (c/make-proxy clazz))
+
+(defn -factory []
+  the-factory)
+  
+
+  
 
 
