@@ -98,43 +98,54 @@ __TBD__
 
 In your Java code you define an interface for your DTO (`SomeDto`)
 with getters and setters. If you like, you can put a static factory
-method in there too. Then use getters, setters etc.
+method in there too.
 
-Note that I'm using `deeto.IDeeto` so that the DTO interface
-implements/extends `Cloneable` and `Serializable` __and__ has a
-`public` `clone` method so that `clone` can be called without problems
-(and the need to cast). Using `deeto.IDeeto` is totally optional.
+Note that `SomeDto extends deeto.IDeeto` so that the DTO type
+implements `Cloneable` and `Serializable` __and__ has a `public`
+`clone` method so that `clone` can be called without problems (and no
+need to cast). Using `deeto.IDeeto` is totally optional for using
+Deeto.
 
     package deeto_user;
     
     import deeto.Deeto;
     import deeto.IDeeto;
     
-    interface SomeDto extends IDeeto<SomeDto> {
-	
+    interface SomeDto extends IDeeto {
         String getFoo();
+    
         void setFoo(String x);
-		
+    
         int getBar();
+    
         void setBar(int x);
-		
+     
         static SomeDto newInstance() {
             return Deeto.factory().newInstance(SomeDto.class);
         }
     }
-    
+
     public class DeetoExample {
 
         public static void main(String[] args) throws Exception {
 
-            MyDto foo = MyDto.newInstance();
+            SomeDto foo = SomeDto.newInstance();
             System.out.println("foo = " + foo);
 
             foo.setFoo("FOO!");
             System.out.println("foo = " + foo);
 
-            MyDto bar = foo.clone();
-            System.out.println(bar.equals(foo));
+            SomeDto bar = foo.clone();
+            System.out.println("bar.equals(foo) = " + bar.equals(foo));
 
+            SomeDto quox = Deeto.factory().copyOf(bar);
+            System.out.println("quox = " + quox);
         }
     }
+
+## TODOS
+
+* reflect-on should cache
+* ser-de-ser should be accessable through the java-api
+* equals must check for class identity
+* docu about serial form

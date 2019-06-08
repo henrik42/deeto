@@ -28,7 +28,7 @@
     (is (= [deeto.StringDto java.io.Serializable java.lang.Cloneable]
            (->> c .getInterfaces (into []))))))
 
-(def i (make-proxy deeto.StringDto))
+;;(def i (make-proxy deeto.StringDto))
 
 (deftest test-reflect-on
   (is (= (into {} [string-property])

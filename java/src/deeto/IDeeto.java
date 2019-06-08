@@ -1,5 +1,5 @@
 package deeto;
 
-public interface IDeeto<T> extends java.io.Serializable, Cloneable {
-    T clone();
+public interface IDeeto extends java.io.Serializable, Cloneable {
+    <T> T clone();
 }
