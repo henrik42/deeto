@@ -41,9 +41,6 @@ factory will return a new instance `i` with the following properties:
   there is no guarantee since technically there are ways to explicitly
   and intentionally screw-up on this).
 
-__TBD__ Say something about `P`'s serialized form and how it can pass
-  process boundaries.
-
 [1] https://clojure.org/  
 [2] https://en.wikipedia.org/wiki/Data_transfer_object  
 [3] https://martinfowler.com/bliki/LocalDTO.html  
@@ -69,20 +66,75 @@ them for and why you shouldn't and how they are different from value
 objects. Deeto is for those who do use DTOs for one reason or the
 other.
 
+## Immutability
+
+Deeto's proxys are __mutable, statefull containers__ with getters and
+setters for access to their __properties values__. And eventhough the
+__properties__ are mutable, their __values__ are meant to be
+__immutable__.
+
+So Deeto's setter implementation creates a _serialization copy_ (see
+above) or _defenvive copy_ [1] of its argument value (which therefore
+must be `Serializable`). So there is no way for users of Deeto to give
+a setter method a mutable object and keep a reference to that object
+through which the client could aftewards change that very object and
+thus change the DTO's value _behind the scene_. The only way to change
+the __property__ is by using the setter. There just __is no way you
+can change a value__ [2].
+
+The same is true for Deeto's getter which also return only a
+_defenvive copy_ of their internal (possibly mutable) value
+object.
+
+[1] http://www.javacreed.com/what-is-defensive-copying/
+[2] http://www.javapractices.com/topic/TopicAction.do?Id=15  
+[3] https://clojure.org/about/state  
+
+## Serialized form
+
+__TBD__
+
 ## Usage
 
-In your Java code you define an interface for your DTO:
+In your Java code you define an interface for your DTO (`SomeDto`)
+with getters and setters. If you like, you can put a static factory
+method in there too. Then use getters, setters etc.
 
-	interface MyDto {
-		String getString();
-		void setString(String x);
-	}
+Note that I'm using `deeto.IDeeto` so that the DTO interface
+implements/extends `Cloneable` and `Serializable` __and__ has a
+`public` `clone` method so that `clone` can be called without problems
+(and the need to cast). Using `deeto.IDeeto` is totally optional.
 
-Now you use Deeto to create a factory:
+    package deeto_user;
+    
+    import deeto.Deeto;
+    import deeto.IDeeto;
+    
+    interface SomeDto extends IDeeto<SomeDto> {
+	
+        String getFoo();
+        void setFoo(String x);
+		
+        int getBar();
+        void setBar(int x);
+		
+        static SomeDto newInstance() {
+            return Deeto.factory().newInstance(SomeDto.class);
+        }
+    }
+    
+    public class DeetoExample {
 
-__TBD: create factory__
+        public static void main(String[] args) throws Exception {
 
-Finally you create instances and use them:
+            MyDto foo = MyDto.newInstance();
+            System.out.println("foo = " + foo);
 
-__create instances and use__
+            foo.setFoo("FOO!");
+            System.out.println("foo = " + foo);
 
+            MyDto bar = foo.clone();
+            System.out.println(bar.equals(foo));
+
+        }
+    }

@@ -135,7 +135,7 @@
      (let [properties (reflect-on proxy-type)
            state (atom (into (sorted-map)
                              (map #(-> [% nil]) (keys properties))))]
-       (make-proxy proxy-type
+       (make-proxy [proxy-type java.io.Serializable Cloneable]
                    (partial #'handler proxy-type properties state))))
   ([proxy-type handler-fn]
      (let [pt (if (vector? proxy-type)

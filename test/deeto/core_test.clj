@@ -19,6 +19,17 @@
                                      :property-getter "getIntArray",
                                      :property-setter "setIntArray"}])
 
+
+;; i's class P is a Java dynamic proxy class [6] wich implements I, Cloneable and Serializable.
+(deftest test-basics
+  (let [i (make-proxy deeto.StringDto)
+        c (.getClass i)]
+    (is (= true (java.lang.reflect.Proxy/isProxyClass c)))
+    (is (= [deeto.StringDto java.io.Serializable java.lang.Cloneable]
+           (->> c .getInterfaces (into []))))))
+
+(def i (make-proxy deeto.StringDto))
+
 (deftest test-reflect-on
   (is (= (into {} [string-property])
          (reflect-on deeto.StringDto)))
@@ -51,6 +62,9 @@
     (aset (.getIntArray int-dto) 1 3)
     (is (= true (.equals int-dto int-dto-b)))))
 
+;; TBD: P's boolean equals(Object o) implementation (of boolean
+;; Object.equals(Object)) returns true if o and i are of the same
+;; Class and if all properties are equals(Object)
 (deftest test-equals
   (let [int-dto-a (doto (make-proxy deeto.intDto)
                     (.setInt 1))
@@ -88,6 +102,8 @@
     (.setIntArray int-dto-b int-array-a)
     (is (= true (.equals int-dto-a int-dto-b)))))
 
+;; TBD: P's int hashCode() implementation (of int Object.hashCode())
+;; is consistent with P's boolean equals(Object) implementation.
 (deftest test-hash-code
   (let [int-dto (make-proxy deeto.intDto)]))
 
