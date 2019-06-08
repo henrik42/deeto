@@ -3,8 +3,7 @@
   (:gen-class
    :name deeto.Deeto
    :implements [deeto.Factory]
-   :methods [^:static [factory [] deeto.Factory]
-             #_ [newInstance [Class] Object]]))
+   :methods [^:static [factory [] deeto.Factory]]))
 
 (def the-factory
   (deeto.Deeto.))

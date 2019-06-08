@@ -1,4 +1,10 @@
-(ns deeto.core)
+(ns deeto.core
+  (:gen-class
+   :name deeto.SerializableInvocationHandler
+   :constructors {[Object] []}
+   :init init
+   :state state
+   :implements [deeto.ISerializable java.lang.reflect.InvocationHandler]))
 
 (defn ser-de-ser
   "Returns a deep clone. The clone is created by serializing and
@@ -105,6 +111,16 @@
 
 (declare handler)
 
+;; https://i-proving.com/2008/02/11/the-pitfalls-of-dynamic-proxy-serialization/
+(defn make-serializable-invocation-handler [handler-fn dto-type]
+  (proxy [java.lang.reflect.InvocationHandler deeto.ISerializable] []
+    (writeReplace []
+      (let [v {:value (handler-fn nil nil) :dto-type dto-type}]
+        (.println System/out (str "writereplace --> " v))
+        (deeto.SerializableInvocationHandler. v)))
+    (invoke [the-proxy the-method the-args]
+      (handler-fn the-method the-args))))
+
 (defn make-proxy
   "Returns a Java dynamic proxy (_Deeto proxy_) for the given
    interface(s). Any invocation on the proxy will be delegated to the
@@ -121,7 +137,6 @@
                              (map #(-> [% nil]) (keys properties))))]
        (make-proxy proxy-type
                    (partial #'handler proxy-type properties state))))
-  
   ([proxy-type handler-fn]
      (let [pt (if (vector? proxy-type)
                 (into-array proxy-type)
@@ -129,9 +144,7 @@
        (java.lang.reflect.Proxy/newProxyInstance
         (.getClassLoader (first pt)) 
         pt
-        (proxy [java.lang.reflect.InvocationHandler] []
-          (invoke [the-proxy the-method the-args]
-            (handler-fn the-method the-args)))))))
+        (make-serializable-invocation-handler handler-fn (first pt))))))
 
 (defn get-state
   "Returns internal state (map) of Deeto proxy."
@@ -183,36 +196,65 @@
                 return-type (.getReturnType the-method)
                 parameter-types (into [] (.getParameterTypes the-method))]
             (cond
-              
+              ;; getter returns deep-copy/clone of property's
+              ;; value. References to internal state do not leak to
+              ;; the outside (see "clone" below)
               get-property (ser-de-ser (@state get-property))
+              
+              ;; setter creates deep-copy/clone of argument value
+              ;; before making the copy/clone part of the internal
+              ;; state. So references in/to the argument value will
+              ;; not become part of the internal state and thus do not
+              ;; leak to the outside (see "clone" below)
               set-property (swap! state assoc set-property (ser-de-ser (first the-args)))
               
-              (= "toString" method-name) (str @state)
+              ;; TBD: how does this behave if serial form of DTO type
+              ;; evolves (insert/remove properties, change property
+              ;; type)? Do we consider ALL properties or only the ones
+              ;; which are part of the current DTOs contract?
               (= "equals" method-name) (and
                                         ;; classes match?
                                         ;; (.equals clazz nil)
                                         (handle-equals state the-method the-args))
+
+              ;; consistent with equals(?) (TBD: serial form of DTOs
+              ;; type evolves?)
               (= "hashCode" method-name) (java.util.Arrays/deepHashCode (into-array Object (vals @state)))
 
-              ;; Note: for clone we do not need to create a deep copy!
-              ;; Since we'll never mutate internal values and we never
-              ;; leak references to the outside there is no danger
-              ;; that anyone ever changes state. So effectivly we hava
-              ;; constant values (which you need not clone).
+              ;; Note: for clone we do **not** need to create a deep
+              ;; copy - or any copy really! I.e. we can _re-use_
+              ;; @state's value **as-is**. Since we'll never mutate
+              ;; internal values (@state map is immutable/persistent
+              ;; anyways, but the map's values may be mutable) and we
+              ;; never leak @state maps's value references to the
+              ;; outside there is no danger that anyone ever changes
+              ;; state. So effectivly we hava constant immutable
+              ;; values (which you need not clone). So all we do need
+              ;; is a new proxy/mutable state container (with the
+              ;; *same* value).
               (= "clone" method-name)
               (make-proxy clazz (partial #'handler clazz properties (atom @state)))
               
+              (= "toString" method-name) (str @state)
+
               :else (throw (ex-info "Unknown invocation"
                                     {:properties properties
                                      :state state
                                      :the-method the-method
                                      :the-args (into [] the-args)}))))))
-#_
-(defprotocol Factory
-  (newInstance [this]))
 
-#_
-(defn factory-for [class]
-  (reify Factory
-    (newInstance [this]
-      nil)))
+(defn -init [v]
+  [[] v])
+  
+(defn -writeReplace [this]
+  (.println System/out (str this "-writeReplace" (.state this)))
+  this)
+
+(defn -readResolve [this]
+  (.println System/out (str this "-readResolve"))
+  (let [{:keys [value dto-type]} (.state this)
+        properties (reflect-on dto-type)
+        ;;state (atom (into (sorted-map) (map #(-> [% nil]) (keys properties))))
+        state (atom value)
+        handler-fn (partial #'handler dto-type properties state)]
+    (make-serializable-invocation-handler handler-fn dto-type)))
