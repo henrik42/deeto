@@ -112,12 +112,11 @@ Deeto.
     import deeto.IDeeto;
     
     interface SomeDto extends IDeeto {
+	
         String getFoo();
-    
         void setFoo(String x);
     
         int getBar();
-    
         void setBar(int x);
      
         static SomeDto newInstance() {
@@ -146,6 +145,5 @@ Deeto.
 ## TODOS
 
 * reflect-on should cache
-* ser-de-ser should be accessable through the java-api
 * equals must check for class identity
 * docu about serial form
