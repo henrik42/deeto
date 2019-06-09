@@ -31,11 +31,11 @@ factory will return a new instance `i` with the following properties:
   _handler_.
 
 * `P`'s `P clone()` implementation (of `Object Object.clone()`) will
-  return a _serialization copy_ of `i`. I.e. the copy will be created
-  by deserializing the serialized `i`. Note that this will usually
-  mean that the copy is a __deep clone/copy__ of the original `i` (but
-  there is no guarantee since technically there are ways to explicitly
-  and intentionally screw-up on this).
+  return a _serialization copy_ of `i` [8]. I.e. the copy will be
+  created by deserializing the serialized `i`. Note that this will
+  usually mean that the copy is a __deep clone/copy__ of the original
+  `i` (but there is no guarantee since technically there are ways to
+  explicitly and intentionally screw-up on this).
 
 [1] https://clojure.org/  
 [2] https://en.wikipedia.org/wiki/Data_transfer_object  
@@ -44,23 +44,27 @@ factory will return a new instance `i` with the following properties:
 [5] https://en.wikipedia.org/wiki/Factory_method_pattern  
 [6] https://docs.oracle.com/javase/8/docs/technotes/guides/reflection/proxy.html  
 [7] https://www.journaldev.com/17129/java-deep-copy-object  
+[8] Implementation note: at the moment `clone()` does __not__ use
+    serialization but just creates a new proxy with the original's
+    value.
 
 ## Properties
 
 Data transfer objects are __mutable containers__ -- used to transport
 a bunch of values (_properties_) that belong together somehow
 [1]. They usually have a setter and a getter for each property `q` (of
-matching types `Q`). Java Beans have similiar semantics but support
-the observer pattern.
+matching types `Q`). Java Beans [2] have similiar semantics but
+support the observer pattern and more.
 
 Deeto analyzes the interface `I` and derives the set of properties and
 their types. The _handler_ then implements the statefull
 get-and-set-semantics.
 
 [1] I don't want to argue about what DTOs exactly are, what to use
-them for and why you shouldn't and how they are different from value
-objects. Deeto is for those who do use DTOs for one reason or the
-other.
+  them for and why you shouldn't and how they are different from value
+  objects. Deeto is for those who do use DTOs for one reason or
+  the other.  
+[2] https://en.wikipedia.org/wiki/JavaBeans
 
 ## Immutability
 
@@ -71,20 +75,27 @@ __immutable__.
 
 So Deeto's setter implementation creates a _serialization copy_ (see
 above) or _defenvive copy_ [1] of its argument value (which therefore
-must be `Serializable`). So there is no way for users of Deeto to give
-a setter method a mutable object and keep a reference to that object
-through which the client could aftewards change that very object and
-thus change the DTO's value _behind the scene_. The only way to change
-the __property__ is by using the setter. There just __is no way you
-can change a value__ [2].
+must be `Serializable` [4]). So there is no way for users of Deeto to
+give a setter method a mutable object and keep a reference to that
+object through which the client could aftewards change that very
+object and thus change the DTO's value _behind the scene_. The only
+way to change the __property__ is by using the setter. There just __is
+no way you can change a value__ [2].
 
 The same is true for Deeto's getter which also return only a
 _defenvive copy_ of their internal (possibly mutable) value
 object.
 
-[1] http://www.javacreed.com/what-is-defensive-copying/
+[1] http://www.javacreed.com/what-is-defensive-copying/  
 [2] http://www.javapractices.com/topic/TopicAction.do?Id=15  
 [3] https://clojure.org/about/state  
+[4] Deeto supports `Serializable` typed properties only. One could
+  imagine to support `Cloneable` typed properties also. But
+  `Cloneable`/`clone` is implemented easily in a way that introduces
+  reference leaks and thus breaks with the kind of immutablility which
+  Deeto aims to support. I hope that DTOs usually contain
+  `Serializable` typed values so that this restriction does not hinder
+  the applicability of Deeto.
 
 ## Usage
 
@@ -104,12 +115,11 @@ Deeto.
 	import deeto.IDeeto;
 
 	interface SomeDto extends IDeeto {
-		String getFoo();
 
+        String getFoo();
 		void setFoo(String x);
 
 		int getBar();
-
 		void setBar(int x);
 
 		static SomeDto newInstance() {
@@ -142,7 +152,6 @@ Deeto.
 			System.out.println("barCopy.equals(fooCopy) = " + barCopy.equals(fooCopy));
 
 		}
-
 	}
 
 ## Notes
