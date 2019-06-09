@@ -109,50 +109,50 @@ implements `Cloneable` and `Serializable` __and__ has a `public`
 need to cast). Using `deeto.IDeeto` is totally optional for using
 Deeto.
 
-	package deeto_user;
+    package deeto_user;
 
-	import deeto.Deeto;
-	import deeto.IDeeto;
+    import deeto.Deeto;
+    import deeto.IDeeto;
 
-	interface SomeDto extends IDeeto {
+    interface SomeDto extends IDeeto {
 
         String getFoo();
-		void setFoo(String x);
+        void setFoo(String x);
 
-		int getBar();
-		void setBar(int x);
+        int getBar();
+        void setBar(int x);
 
-		static SomeDto newInstance() {
-			return Deeto.factory().newInstance(SomeDto.class);
-		}
-	}
+        static SomeDto newInstance() {
+            return Deeto.factory().newInstance(SomeDto.class);
+        }
+    }
 
-	public class DeetoExample {
+    public class DeetoExample {
 
-		public static void main(String[] args) throws Exception {
+        public static void main(String[] args) throws Exception {
 
-			SomeDto foo = SomeDto.newInstance();
-			System.out.println("foo = " + foo);
+            SomeDto foo = SomeDto.newInstance();
+            System.out.println("foo = " + foo);
 
-			foo.setFoo("FOO!");
-			System.out.println("foo = " + foo);
+            foo.setFoo("FOO!");
+            System.out.println("foo = " + foo);
 
-			System.out.println("foo.equals(null) = " + foo.equals(null));
-			System.out.println("foo.equals(\"\") = " + foo.equals(""));
+            System.out.println("foo.equals(null) = " + foo.equals(null));
+            System.out.println("foo.equals(\"\") = " + foo.equals(""));
 
-			SomeDto bar = foo.clone();
-			System.out.println("bar.equals(foo) = " + bar.equals(foo));
+            SomeDto bar = foo.clone();
+            System.out.println("bar.equals(foo) = " + bar.equals(foo));
 
-			SomeDto fooCopy = Deeto.factory().copyOf(foo);
-			System.out.println("fooCopy = " + fooCopy);
+            SomeDto fooCopy = Deeto.factory().copyOf(foo);
+            System.out.println("fooCopy = " + fooCopy);
 
-			SomeDto barCopy = Deeto.factory().copyOf(bar);
-			System.out.println("barCopy = " + barCopy);
+            SomeDto barCopy = Deeto.factory().copyOf(bar);
+            System.out.println("barCopy = " + barCopy);
 
-			System.out.println("barCopy.equals(fooCopy) = " + barCopy.equals(fooCopy));
+            System.out.println("barCopy.equals(fooCopy) = " + barCopy.equals(fooCopy));
 
-		}
-	}
+        }
+    }
 
 ## Notes
 
