@@ -1,9 +1,5 @@
 # Deeto
 
-
-__!!!!!!!! THIS IS WORK IN PROGRESS !!!!!!!__
-
-
 __A Java dynamic proxy factory for interface-typed data transfer objects__
 
 Deeto is a Clojure [1] library for Java developers. With Deeto you can
@@ -90,10 +86,6 @@ object.
 [2] http://www.javapractices.com/topic/TopicAction.do?Id=15  
 [3] https://clojure.org/about/state  
 
-## Serialized form
-
-__TBD__
-
 ## Usage
 
 In your Java code you define an interface for your DTO (`SomeDto`)
@@ -106,43 +98,64 @@ implements `Cloneable` and `Serializable` __and__ has a `public`
 need to cast). Using `deeto.IDeeto` is totally optional for using
 Deeto.
 
-    package deeto_user;
-    
-    import deeto.Deeto;
-    import deeto.IDeeto;
-    
-    interface SomeDto extends IDeeto {
-	
-        String getFoo();
-        void setFoo(String x);
-    
-        int getBar();
-        void setBar(int x);
-     
-        static SomeDto newInstance() {
-            return Deeto.factory().newInstance(SomeDto.class);
-        }
-    }
+	package deeto_user;
 
-    public class DeetoExample {
+	import deeto.Deeto;
+	import deeto.IDeeto;
 
-        public static void main(String[] args) throws Exception {
+	interface SomeDto extends IDeeto {
+		String getFoo();
 
-            SomeDto foo = SomeDto.newInstance();
-            System.out.println("foo = " + foo);
+		void setFoo(String x);
 
-            foo.setFoo("FOO!");
-            System.out.println("foo = " + foo);
+		int getBar();
 
-            SomeDto bar = foo.clone();
-            System.out.println("bar.equals(foo) = " + bar.equals(foo));
+		void setBar(int x);
 
-            SomeDto quox = Deeto.factory().copyOf(bar);
-            System.out.println("quox = " + quox);
-        }
-    }
+		static SomeDto newInstance() {
+			return Deeto.factory().newInstance(SomeDto.class);
+		}
+	}
+
+	public class DeetoExample {
+
+		public static void main(String[] args) throws Exception {
+
+			SomeDto foo = SomeDto.newInstance();
+			System.out.println("foo = " + foo);
+
+			foo.setFoo("FOO!");
+			System.out.println("foo = " + foo);
+
+			System.out.println("foo.equals(null) = " + foo.equals(null));
+			System.out.println("foo.equals(\"\") = " + foo.equals(""));
+
+			SomeDto bar = foo.clone();
+			System.out.println("bar.equals(foo) = " + bar.equals(foo));
+
+			SomeDto fooCopy = Deeto.factory().copyOf(foo);
+			System.out.println("fooCopy = " + fooCopy);
+
+			SomeDto barCopy = Deeto.factory().copyOf(bar);
+			System.out.println("barCopy = " + barCopy);
+
+			System.out.println("barCopy.equals(fooCopy) = " + barCopy.equals(fooCopy));
+
+		}
+
+	}
+
+## Notes
+
+* `toString()` implementation is not stable yet. So you have to expect
+  changes in future releases.
+
+* the Clojure code is pretty bad at the moment. It will be refactored
+  but sematics will not change.
+
+* serial form will change in the future. You must expect that stored
+  serial forms will not be compatible with future releases.
 
 ## TODOS
 
-* reflect-on should cache
-* docu about serial form
+* add documentation about serial form
