@@ -99,6 +99,20 @@ object.
 
 ## Usage
 
+You can download Deeto JAR from clojars:
+https://clojars.org/repo/deeto/deeto/0.1.0-SNAPSHOT/
+
+In addition you need clojar JAR:
+https://repo1.maven.org/maven2/org/clojure/clojure/1.8.0/clojure-1.8.0.jar
+
+For Maven users (you need to add clojars to your SNAPSHOT repos):
+
+	<dependency>
+	  <groupId>deeto</groupId>
+	  <artifactId>deeto</artifactId>
+	  <version>0.1.0-SNAPSHOT</version>
+	</dependency>
+
 In your Java code you define an interface for your DTO (`SomeDto`)
 with getters and setters. If you like, you can put a static factory
 method in there too.
