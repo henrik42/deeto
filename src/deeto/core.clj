@@ -6,13 +6,21 @@
    :state state
    :implements [deeto.ISerializable java.lang.reflect.InvocationHandler]))
 
+(defn info [x]
+  {:to-string (str x)
+   :class (.getClass x)
+   :interfaces (->> x .getClass .getInterfaces (into []))})
+
 (defn ser-de-ser
   "Returns a deep clone. The clone is created by serializing and
    deserializing any non-nil argument. Checks that the argument and
    the clone are `Arrays/deepEquals`. Returns `nil` for `nil`."
 
   [x]
-  {:post [(java.util.Arrays/deepEquals (into-array Object [x]) (into-array Object [%]))]}
+  {:post [(or (java.util.Arrays/deepEquals (into-array Object [x]) (into-array Object [%]))
+              (throw (ex-info "Copy is not equal to original!"
+                              {:original (info x)
+                               :copy (info %)})))]}
   (if (nil? x) nil
       (with-open [baos (java.io.ByteArrayOutputStream.)
                   oos (java.io.ObjectOutputStream. baos)]
@@ -96,9 +104,7 @@
        ;; Method is non-getter/setter (like equals, hashCode, clone,
        ;; readResolve,...) So we ignore it here! We could check that
        ;; it is one of the known other methods that we support.
-       (do 
-         ;; (println "no getter/setter" m)
-         res)))
+       res))
    (sorted-map) ;; Start value is an empty map
    (map (fn [m] ;; seq of method-map containing preprocessed things about each method
           (let [n (.getName m)]
@@ -109,6 +115,8 @@
              :parameter-types (into [] (.getParameterTypes m))}))
         (.getMethods clazz))))
 
+(def reflect-on* (memoize reflect-on))
+
 (declare handler)
 
 ;; https://i-proving.com/2008/02/11/the-pitfalls-of-dynamic-proxy-serialization/
@@ -116,7 +124,6 @@
   (proxy [java.lang.reflect.InvocationHandler deeto.ISerializable] []
     (writeReplace []
       (let [v {:value (handler-fn nil nil) :dto-type dto-type}]
-        (.println System/out (str "writereplace --> " v))
         (deeto.SerializableInvocationHandler. v)))
     (invoke [the-proxy the-method the-args]
       (handler-fn the-method the-args))))
@@ -132,7 +139,7 @@
    state to `handler` (see below)."
   
   ([proxy-type]
-     (let [properties (reflect-on proxy-type)
+     (let [properties (reflect-on* proxy-type)
            state (atom (into (sorted-map)
                              (map #(-> [% nil]) (keys properties))))]
        (make-proxy [proxy-type java.io.Serializable Cloneable]
@@ -157,7 +164,7 @@
   "Returns `true` if `@state` and the first value of `the-args` are
    equal in terms of `java.util.Arrays/deepEquals`."
 
-  [state the-method the-args]
+  [clazz state the-method the-args]
   (let [the-args (into [] the-args)
         other (first the-args)]
     (cond 
@@ -166,26 +173,14 @@
       
       (nil? other)
       false
+
+      (not= [clazz java.io.Serializable Cloneable] (->> other .getClass .getInterfaces (into [])))
+      false
       
       :else 
-      ;; #_
       (let [s1 (into-array Object (vals @state))
             s2 (into-array Object (vals (get-state other)))]
-        ;; (println "states=" (into [] s1) (into [] s2))
-        (java.util.Arrays/deepEquals s1 s2))
-      #_ ;; altenative -- should be removed. 
-      (reduce (fn [v [p v1 v2]]
-                #_
-                {:pre [(or (println "compare" [p v1 v2]) true)]
-                 :post [(or (println "compare" [p v1 v2] " -> " %) true)]}
-                (if-not 
-                    (java.util.Arrays/deepEquals (into-array Object [v1]) (into-array Object [v2]))
-                  (reduced false)
-                  true))
-              true 
-              (map (fn [[p1 v1] [p2 v2]]
-                     [p1 v1 v2])
-                   @state (get-state other))))))
+        (java.util.Arrays/deepEquals s1 s2)))))
 
 (defn handler [clazz properties state the-method the-args]
   ;; Special access to @state via null method (see get-state)
@@ -212,10 +207,7 @@
               ;; evolves (insert/remove properties, change property
               ;; type)? Do we consider ALL properties or only the ones
               ;; which are part of the current DTOs contract?
-              (= "equals" method-name) (and
-                                        ;; classes match?
-                                        ;; (.equals clazz nil)
-                                        (handle-equals state the-method the-args))
+              (= "equals" method-name) (handle-equals clazz state the-method the-args)
 
               ;; consistent with equals(?) (TBD: serial form of DTOs
               ;; type evolves?)
@@ -233,9 +225,10 @@
               ;; is a new proxy/mutable state container (with the
               ;; *same* value).
               (= "clone" method-name)
-              (make-proxy clazz (partial #'handler clazz properties (atom @state)))
+              (make-proxy [clazz java.io.Serializable Cloneable]
+                          (partial #'handler clazz properties (atom @state)))
               
-              (= "toString" method-name) (str @state)
+              (= "toString" method-name) (str {:type clazz :value @state})
 
               :else (throw (ex-info "Unknown invocation"
                                     {:properties properties
@@ -247,14 +240,11 @@
   [[] v])
   
 (defn -writeReplace [this]
-  (.println System/out (str this "-writeReplace" (.state this)))
   this)
 
 (defn -readResolve [this]
-  (.println System/out (str this "-readResolve"))
   (let [{:keys [value dto-type]} (.state this)
-        properties (reflect-on dto-type)
-        ;;state (atom (into (sorted-map) (map #(-> [% nil]) (keys properties))))
+        properties (reflect-on* dto-type)
         state (atom value)
         handler-fn (partial #'handler dto-type properties state)]
     (make-serializable-invocation-handler handler-fn dto-type)))

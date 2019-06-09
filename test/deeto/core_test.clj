@@ -23,12 +23,17 @@
 ;; i's class P is a Java dynamic proxy class [6] wich implements I, Cloneable and Serializable.
 (deftest test-basics
   (let [i (make-proxy deeto.StringDto)
-        c (.getClass i)]
+        c (.getClass i)
+        j (ser-de-ser i)
+        k (.getClass j)]
+    (is (= true (.equals i j)))
+    (is (= true (.equals j i)))
     (is (= true (java.lang.reflect.Proxy/isProxyClass c)))
+    (is (= true (java.lang.reflect.Proxy/isProxyClass k)))
     (is (= [deeto.StringDto java.io.Serializable java.lang.Cloneable]
-           (->> c .getInterfaces (into []))))))
-
-;;(def i (make-proxy deeto.StringDto))
+           (->> c .getInterfaces (into []))))
+    (is (= [deeto.StringDto java.io.Serializable java.lang.Cloneable]
+           (->> k .getInterfaces (into []))))))
 
 (deftest test-reflect-on
   (is (= (into {} [string-property])
@@ -38,12 +43,14 @@
 
 (deftest test-make-proxy
   (let [int-dto (make-proxy deeto.intDto)]
-    (is (= "{\"Int\" nil, \"IntArray\" nil}" (.toString int-dto)))))
+    (is (= "{:type deeto.intDto, :value {\"Int\" nil, \"IntArray\" nil}}"
+           (.toString int-dto)))))
 
 (deftest test-to-string
   (let [int-dto (make-proxy deeto.intDto)]
     (.setInt int-dto 1)
-    (is (= "{\"Int\" 1, \"IntArray\" nil}" (.toString int-dto)))))
+    (is (= "{:type deeto.intDto, :value {\"Int\" 1, \"IntArray\" nil}}"
+           (.toString int-dto)))))
 
 ;; Getters should return clones of internal state values. So mutating
 ;; the return value (e.g. an array) after calling the getter should

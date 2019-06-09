@@ -145,5 +145,4 @@ Deeto.
 ## TODOS
 
 * reflect-on should cache
-* equals must check for class identity
 * docu about serial form
