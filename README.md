@@ -46,7 +46,7 @@ factory will return a new instance `i` with the following properties:
 [7] https://www.journaldev.com/17129/java-deep-copy-object  
 [8] Implementation note: at the moment `clone()` does __not__ use
     serialization but just creates a new proxy with the original's
-    value.
+    value. This may change in future releases though.
 
 ## Properties
 
@@ -156,14 +156,14 @@ Deeto.
 
 ## Notes
 
-* `toString()` implementation is not stable yet. So you have to expect
-  changes in future releases.
+* `toString()` implementation is __not stable yet__. So you have to
+  expect __changes in future releases__.
 
 * the Clojure code is pretty bad at the moment. It will be refactored
-  but sematics will not change.
+  but sematics will not change (hopefully :-)
 
-* serial form will change in the future. You must expect that stored
-  serial forms will not be compatible with future releases.
+* serial form will __change in the future__. You must expect that
+  stored serial forms will __not be compatible with future releases__.
 
 ## TODOS
 
