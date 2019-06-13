@@ -9,26 +9,29 @@ you can ask Deeto to analyze (via reflection [4]) the interface class
 `I` and then give you a factory [5] for `I`. On each invovation this
 factory will return a new instance `i` with the following properties:
 
-* `i`'s class `P` is a Java dynamic proxy class [6] wich implements
+* `i`'s class `P` is a Java dynamic proxy class [6] which implements
   `I`, `Cloneable` and `Serializable`.
 
 * `i` uses a (Clojure based) invocation _handler_. This _handler_ will
   process method invocations on `i`. `i`'s _handler_ is
-  statefull. Calling setter `void set<q>(Q)` (of `I`) on `i` will set
+  stateful. Calling setter `void set<q>(Q)` (of `I`) on `i` will set
   the __property__ (see below) `q` of type `Q`. Calling `Q get<q>()`
   (of `I`) on `i` will return `i`'s current value of property `q` of
-  type `Q`. These statefull semantics are implemented in the
-  _handler_.
+  type `Q`. These stateful semantics are implemented in the _handler_.
 
 * `P`'s `boolean equals(Object o)` implementation (of `boolean
   Object.equals(Object)`) returns `true` if `o` and `i` are of the
-  __same `Class`__ and if all properties are `equals(Object)`. The
-  `equals` semantics are implemented in the _handler_.
+  __same `Class`__ and if all properties are
+  `Q.equals(Object)`. I.e. the `equals` semantics for `P` are
+  implemented in the _handler_ -- the `equals` semantics for each of
+  the properties are implemented in each properties' class `Q`.
 
 * `P`'s `int hashCode()` implementation (of `int Object.hashCode()`)
   is consistent with `P`'s `boolean equals(Object)`
-  implementation. The `hashCode` semantics are implemented in the
-  _handler_.
+  implementation. The `P.hashCode()` semantics are implemented in the
+  _handler_ and it's based on `Q.hashCode()` of the properties. So
+  again, `P.hashCode` is consistent with `P.equals(Object)` only if
+  each `Q.hashCode()` is consistent with `Q.equals(Object)`.
 
 * `P`'s `P clone()` implementation (of `Object Object.clone()`) will
   return a _serialization copy_ of `i` [8]. I.e. the copy will be
@@ -57,7 +60,7 @@ matching types `Q`). Java Beans [2] have similiar semantics but
 support the observer pattern and more.
 
 Deeto analyzes the interface `I` and derives the set of properties and
-their types. The _handler_ then implements the statefull
+their types. The _handler_ then implements the stateful
 get-and-set-semantics.
 
 [1] I don't want to argue about what DTOs exactly are, what to use
@@ -68,22 +71,22 @@ get-and-set-semantics.
 
 ## Immutability
 
-Deeto's proxys are __mutable, statefull containers__ with getters and
+Deeto's proxys are __mutable, stateful containers__ with getters and
 setters for access to their __properties values__. And eventhough the
 __properties__ are mutable, their __values__ are meant to be
 __immutable__.
 
 So Deeto's setter implementation creates a _serialization copy_ (see
-above) or _defenvive copy_ [1] of its argument value (which therefore
-must be `Serializable` [4]). So there is no way for users of Deeto to
-give a setter method a mutable object and keep a reference to that
-object through which the client could aftewards change that very
+above) or _defensive copy_ [1, 2] of its argument value (which
+therefore must be `Serializable` [4]). So there is no way for users of
+Deeto to give a setter method a mutable object and keep a reference to
+that object through which the client could afterwards change that very
 object and thus change the DTO's value _behind the scene_. The only
 way to change the __property__ is by using the setter. There just __is
-no way you can change a value__ [2].
+no way you can change a value__ [3].
 
 The same is true for Deeto's getter which also return only a
-_defenvive copy_ of their internal (possibly mutable) value
+_defensive copy_ of their internal (possibly mutable) value
 object.
 
 [1] http://www.javacreed.com/what-is-defensive-copying/  
@@ -100,9 +103,9 @@ object.
 ## Usage
 
 You can download Deeto JAR from clojars:
-https://clojars.org/repo/deeto/deeto/0.1.0-SNAPSHOT/
+https://clojars.org/repo/deeto/deeto/
 
-In addition you need clojar JAR:
+In addition you need Clojure JAR [1]:
 https://repo1.maven.org/maven2/org/clojure/clojure/1.8.0/clojure-1.8.0.jar
 
 For Maven users (you need to add clojars to your SNAPSHOT repos):
@@ -115,7 +118,7 @@ For Maven users (you need to add clojars to your SNAPSHOT repos):
 
 In your Java code you define an interface for your DTO (`SomeDto`)
 with getters and setters. If you like, you can put a static factory
-method in there too.
+method in there too (which will be ignored by Deeto).
 
 Note that `SomeDto extends deeto.IDeeto` so that the DTO type
 implements `Cloneable` and `Serializable` __and__ has a `public`
@@ -167,6 +170,9 @@ Deeto.
 
         }
     }
+
+[1] I've tested version 1.8.0 but it should work with any recent
+  Clojure release.
 
 ## Notes
 
