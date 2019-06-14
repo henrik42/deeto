@@ -1,4 +1,5 @@
 (ns deeto.core
+  (require [clojure.string :as str])
   (:gen-class
    :name deeto.SerializableInvocationHandler
    :constructors {[Object] []}
@@ -28,6 +29,20 @@
         (with-open [bais (java.io.ByteArrayInputStream. (.toByteArray baos))
                     ois (java.io.ObjectInputStream. bais)]
           (.readObject ois)))))
+
+(defn reflect-on-method [clazz m]
+  (let [n (.getName m)
+        return-type (.getReturnType m)
+        parameter-types (into [] (.getParameterTypes m))]
+    {:method-name n
+     :get-property (-> (re-matches #"get(.+)" n) second)
+     :set-property (-> (re-matches #"set(.+)" n) second)
+     :build-mutator (when (and (= clazz return-type)
+                               (= 1 (count parameter-types)))
+                      ;; locale!!!!!
+                      (str/capitalize n))
+     :return-type return-type 
+     :parameter-types parameter-types}))
 
 (defn reflect-on
   "Inspects via reflection all methods of the DTO `clazz` and
@@ -106,14 +121,7 @@
        ;; it is one of the known other methods that we support.
        res))
    (sorted-map) ;; Start value is an empty map
-   (map (fn [m] ;; seq of method-map containing preprocessed things about each method
-          (let [n (.getName m)]
-            {:method-name n
-             :get-property (-> (re-matches #"get(.+)" n) second)
-             :set-property (-> (re-matches #"set(.+)" n) second)
-             :return-type (.getReturnType m)
-             :parameter-types (into [] (.getParameterTypes m))}))
-        (.getMethods clazz))))
+   (map (partial reflect-on-method clazz) (.getMethods clazz))))
 
 (def reflect-on* (memoize reflect-on))
 

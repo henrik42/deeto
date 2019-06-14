@@ -41,6 +41,33 @@
   (is (= (into {} [int-property int-array-property])
          (reflect-on deeto.intDto))))
 
+(defn *get-method [clazz name]
+  (->> clazz .getMethods (filter (fn [m] (= name (.getName m)))) first))
+
+(deftest test-reflect-on-method
+  (is (= {:method-name "getString",
+          :get-property "String",
+          :set-property nil,
+          :build-mutator nil,
+          :return-type java.lang.String,
+          :parameter-types []}
+         (reflect-on-method deeto.StringDto (*get-method deeto.StringDto "getString"))))
+  (is (= {:method-name "setString",
+          :get-property nil,
+          :set-property "String",
+          :build-mutator nil,
+          :return-type java.lang.Void/TYPE,
+          :parameter-types [String]}
+         (reflect-on-method deeto.StringDto (*get-method deeto.StringDto "setString"))))
+  (is (= {:method-name "string",
+          :get-property nil,
+          :set-property nil
+          :build-mutator "String"
+          :return-type deeto.StringDto,
+          :parameter-types [String]}
+         (reflect-on-method deeto.StringDto (*get-method deeto.StringDto "string"))))
+)  
+
 (deftest test-make-proxy
   (let [int-dto (make-proxy deeto.intDto)]
     (is (= "{:type deeto.intDto, :value {\"Int\" nil, \"IntArray\" nil}}"

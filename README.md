@@ -69,6 +69,47 @@ get-and-set-semantics.
   the other.  
 [2] https://en.wikipedia.org/wiki/JavaBeans
 
+## Fluent interface/builder pattern
+
+A builder [1] is a stateful-container that lets you set/build state
+(values) and then finally use it as a factory for some object. Usually
+the builder will provide "setter"-methods that can be *chained*
+(fluent API; see below).
+
+Deeto supports this kind of usage by providing/supporting
+implementations for ("setter") methods of the form `I <q>(<Q>)`.
+
+**Example:** here the property `foo` of some `SomeDto dto` can be set
+  via `dto.foo(String)` which returns `dto` (i.e. the instance that
+  the method was invoked on).
+
+    interface SomeDto extends IDeeto {
+
+        String getFoo();
+        void setFoo(String x);
+		SomeDto foo(String x);
+
+With Deeto you're not using a seperate builder but you're using the
+stateful DTO directly. So all this feature gives you is the option to
+use method chaining on _build-mutators_ instead of calling setters.
+
+The _build-mutators_ (methods) of some interface `I` are discovered by
+Deeto via their signature:
+
+* their return type is `I`
+* they take one Argument
+
+The following rules are not enforced at the moment (but may in future
+releases!):
+
+* their name matches the name `q` of one of `I`´s _properties_
+* their (one) argument is `q`'s type `Q`
+* There must at least be a getter for `q` when there is a
+  _build-mutator_ for `q`.
+
+[1] https://en.wikipedia.org/wiki/Builder_pattern  
+[2] https://en.wikipedia.org/wiki/Fluent_interface  
+
 ## Immutability
 
 Deeto's proxys are __mutable, stateful containers__ with getters and
