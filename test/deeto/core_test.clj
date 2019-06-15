@@ -48,21 +48,21 @@
   (is (= {:method-name "getString",
           :get-property "String",
           :set-property nil,
-          :build-mutator nil,
+          :mutate-property nil,
           :return-type java.lang.String,
           :parameter-types []}
          (reflect-on-method deeto.StringDto (*get-method deeto.StringDto "getString"))))
   (is (= {:method-name "setString",
           :get-property nil,
           :set-property "String",
-          :build-mutator nil,
+          :mutate-property nil,
           :return-type java.lang.Void/TYPE,
           :parameter-types [String]}
          (reflect-on-method deeto.StringDto (*get-method deeto.StringDto "setString"))))
   (is (= {:method-name "string",
           :get-property nil,
           :set-property nil
-          :build-mutator "String"
+          :mutate-property "String"
           :return-type deeto.StringDto,
           :parameter-types [String]}
          (reflect-on-method deeto.StringDto (*get-method deeto.StringDto "string"))))

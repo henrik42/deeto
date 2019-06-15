@@ -1,5 +1,4 @@
 (ns deeto.core
-  (require [clojure.string :as str])
   (:gen-class
    :name deeto.SerializableInvocationHandler
    :constructors {[Object] []}
@@ -30,6 +29,18 @@
                     ois (java.io.ObjectInputStream. bais)]
           (.readObject ois)))))
 
+(defn capitalize
+  "Returns string argument with the first character converted to
+   upper-case (Locale/ENGLISH). Note that `clojure.str/capitalize`
+   uses the JVMs default locale, which may not give you what you
+   expect; see https://en.wikipedia.org/wiki/Dotted_and_dotless_I"
+
+  [s]
+  (if (< (count s) 2)
+    (.toUpperCase s java.util.Locale/ENGLISH)
+    (str (.toUpperCase (subs s 0 1) java.util.Locale/ENGLISH)
+         (subs s 1))))
+
 (defn reflect-on-method [clazz m]
   (let [n (.getName m)
         return-type (.getReturnType m)
@@ -37,10 +48,9 @@
     {:method-name n
      :get-property (-> (re-matches #"get(.+)" n) second)
      :set-property (-> (re-matches #"set(.+)" n) second)
-     :build-mutator (when (and (= clazz return-type)
-                               (= 1 (count parameter-types)))
-                      ;; locale!!!!!
-                      (str/capitalize n))
+     :mutate-property (when (and (= clazz return-type)
+                                 (= 1 (count parameter-types)))
+                        (capitalize n))
      :return-type return-type 
      :parameter-types parameter-types}))
 
