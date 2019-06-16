@@ -7,18 +7,20 @@
 (def string-property ["String" {:property-name "String",
                                 :property-type String,
                                 :property-getter "getString",
-                                :property-setter "setString"}])
+                                :property-setter "setString"
+                                :property-mutator "string"}])
 
 (def int-property ["Int" {:property-name "Int",
                           :property-type Integer/TYPE
                           :property-getter "getInt",
-                          :property-setter "setInt"}])
+                          :property-setter "setInt"
+                          :property-mutator nil}])
 
 (def int-array-property ["IntArray" {:property-name "IntArray",
                                      :property-type (-> (into-array Integer/TYPE []) .getClass)
                                      :property-getter "getIntArray",
-                                     :property-setter "setIntArray"}])
-
+                                     :property-setter "setIntArray"
+                                     :property-mutator nil}])
 
 ;; i's class P is a Java dynamic proxy class [6] wich implements I, Cloneable and Serializable.
 (deftest test-basics

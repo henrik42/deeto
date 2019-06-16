@@ -65,14 +65,14 @@
 
   [clazz]
   (reduce
-   (fn [res {:keys [method-name get-property set-property return-type parameter-types] :as m}]
+   (fn [res {:keys [method-name get-property set-property mutate-property return-type parameter-types] :as m}]
      ;; Object.getClass() is not a DTO property-getter! TBD: do we
      ;; need this?
-     (if-let [property-name (let [x (or get-property set-property)]
+     (if-let [property-name (let [x (or get-property set-property mutate-property)]
                               (when-not (= "Class" x) x))]
        ;; method is a getter or setter
        (assoc res property-name 
-              (if-let [{:keys [property-type property-getter property-setter] :as p} (res property-name)]
+              (if-let [{:keys [property-type property-getter property-setter property-mutator] :as p} (res property-name)]
                 ;; we've seen the property before
                 (assoc p
                   :property-getter
@@ -105,11 +105,19 @@
                              (not= java.lang.Void/TYPE return-type))
                             (throw (ex-info "Not a valid setter" {:res res :m m}))
                             
-                            :else method-name)))
+                            :else method-name))
+
+                  :property-mutator
+                  (if-not mutate-property property-mutator
+                          method-name))
 
                 ;; seeing the property the first time
                 {:property-name property-name
-                 :property-type (if set-property (first parameter-types) return-type)
+                 :property-type (if (or set-property mutate-property)
+                                  (first parameter-types)
+                                  return-type)
+                 :property-mutator (when mutate-property 
+                                     method-name)
                  :property-getter (when get-property
                                     ;; DRY! This repeats the stuff from aboe
                                     (cond
