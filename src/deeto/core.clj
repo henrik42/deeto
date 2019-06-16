@@ -148,7 +148,8 @@
    (sorted-map) ;; Start value is an empty map
    (map (partial reflect-on-method clazz) (.getMethods clazz))))
 
-(def reflect-on* (memoize reflect-on))
+(def reflect-on*
+  (memoize reflect-on))
 
 (declare handler)
 
@@ -218,11 +219,8 @@
 (defn handler [clazz properties state the-method the-args]
   ;; Special access to @state via null method (see get-state)
   (if-not the-method @state
-          (let [method-name (.getName the-method)
-                get-property (-> (re-matches #"get(.+)" method-name) second)
-                set-property (-> (re-matches #"set(.+)" method-name) second)
-                return-type (.getReturnType the-method)
-                parameter-types (into [] (.getParameterTypes the-method))]
+          (let [{:keys [method-name get-property set-property mutate-property return-type parameter-types]}
+                (reflect-on-method clazz the-method)]
             (cond
               ;; getter returns deep-copy/clone of property's
               ;; value. References to internal state do not leak to
@@ -235,6 +233,10 @@
               ;; not become part of the internal state and thus do not
               ;; leak to the outside (see "clone" below)
               set-property (swap! state assoc set-property (ser-de-ser (first the-args)))
+
+              mutate-property (do
+                                (swap! state assoc mutate-property (ser-de-ser (first the-args)))
+                                nil)
               
               ;; TBD: how does this behave if serial form of DTO type
               ;; evolves (insert/remove properties, change property
