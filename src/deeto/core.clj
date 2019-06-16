@@ -109,7 +109,14 @@
 
                   :property-mutator
                   (if-not mutate-property property-mutator
-                          method-name))
+                          (cond
+                            property-mutator
+                            (throw (ex-info "Duplicate mutator" {:res res :m m}))
+                            
+                            (not= property-type (first parameter-types))
+                            (throw (ex-info "Mutator's type mismatch" {:res res :m m}))
+                            
+                            :else method-name)))
 
                 ;; seeing the property the first time
                 {:property-name property-name
