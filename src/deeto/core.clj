@@ -62,6 +62,9 @@
      :return-type return-type 
      :parameter-types parameter-types}))
 
+(def reflect-on-method*
+  (memoize reflect-on-method))
+
 (defn reflect-on
   "Inspects via reflection all methods of the DTO `clazz` and
    determines the __properties__ by looking at __getter__ and
@@ -154,7 +157,7 @@
        ;; it is one of the known other methods that we support.
        res))
    (sorted-map) ;; Start value is an empty map
-   (map (partial reflect-on-method clazz) (.getMethods clazz))))
+   (map (partial reflect-on-method* clazz) (.getMethods clazz))))
 
 (def reflect-on*
   (memoize reflect-on))
@@ -223,7 +226,7 @@
   ;; Special access to @state via null method
   (if-not the-method @state
           (let [{:keys [method-name get-property set-property mutate-property return-type parameter-types]}
-                (reflect-on-method clazz the-method)]
+                (reflect-on-method* clazz the-method)]
             (cond
               ;; getter returns deep-copy/clone of property's
               ;; value. References to internal state do not leak to

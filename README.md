@@ -15,9 +15,11 @@ factory will return a new instance `i` with the following properties:
 * `i` uses a (Clojure based) invocation _handler_. This _handler_ will
   process method invocations on `i`. `i`'s _handler_ is
   stateful. Calling setter `void set<q>(Q)` (of `I`) on `i` will set
-  the __property__ (see below) `q` of type `Q`. Calling `Q get<q>()`
-  (of `I`) on `i` will return `i`'s current value of property `q` of
-  type `Q`. These stateful semantics are implemented in the _handler_.
+  the __property__ (see below) `q` of type `Q`. Calling
+  _build-mutator_ `I <q>(<Q>)` will also set property `q` but return
+  `i`. Calling `Q get<q>()` (of `I`) on `i` will return `i`'s current
+  value of property `q` of type `Q`. These stateful semantics are
+  implemented in the _handler_.
 
 * `P`'s `boolean equals(Object o)` implementation (of `boolean
   Object.equals(Object)`) returns `true` if `o` and `i` are of the
@@ -63,6 +65,9 @@ Deeto analyzes the interface `I` and derives the set of properties and
 their types. The _handler_ then implements the stateful
 get-and-set-semantics.
 
+__Note:__ Deeto supports interface-definitions with only a getter or
+setter for a property even if those have limited usability. 
+
 [1] I don't want to argue about what DTOs exactly are, what to use
   them for and why you shouldn't and how they are different from value
   objects. Deeto is for those who do use DTOs for one reason or
@@ -74,10 +79,11 @@ get-and-set-semantics.
 A builder [1] is a stateful-container that lets you set/build state
 (values) and then finally use it as a factory for some object. Usually
 the builder will provide "setter"-methods that can be *chained*
-(fluent API; see below).
+(fluent API [2]).
 
 Deeto supports this kind of usage by providing/supporting
-implementations for ("setter") methods of the form `I <q>(<Q>)`.
+implementations for (_build-mutator_) methods of the form `I
+<q>(<Q>)`.
 
 **Example:** here the property `foo` of some `SomeDto dto` can be set
   via `dto.foo(String)` which returns `dto` (i.e. the instance that
@@ -93,19 +99,26 @@ With Deeto you're not using a seperate builder but you're using the
 stateful DTO directly. So all this feature gives you is the option to
 use method chaining on _build-mutators_ instead of calling setters.
 
+__Note__: the _build-mutators_ __are__ __mutators__ and not factory
+methods. So they act like setters and they return the instance (proxy)
+on which they are invoked.
+
 The _build-mutators_ (methods) of some interface `I` are discovered by
 Deeto via their signature:
 
 * their return type is `I`
-* they take one Argument
+* they take one argument
+* their (one) argument is `q`'s type `Q`
 
 The following rules are not enforced at the moment (but may in future
 releases!):
 
 * their name matches the name `q` of one of `I`´s _properties_
-* their (one) argument is `q`'s type `Q`
 * There must at least be a getter for `q` when there is a
   _build-mutator_ for `q`.
+
+__Note:__ Deeto supports interface-definitions with just a
+_build-mutator_ for a property even if those have limited usability.
 
 [1] https://en.wikipedia.org/wiki/Builder_pattern  
 [2] https://en.wikipedia.org/wiki/Fluent_interface  
@@ -176,9 +189,11 @@ Deeto.
 
         String getFoo();
         void setFoo(String x);
+	    SomeDto foo(String x);
 
         int getBar();
         void setBar(int x);
+	    SomeDto bar(int x);
 
         static SomeDto newInstance() {
             return Deeto.factory().newInstance(SomeDto.class);
@@ -208,6 +223,11 @@ Deeto.
             System.out.println("barCopy = " + barCopy);
 
             System.out.println("barCopy.equals(fooCopy) = " + barCopy.equals(fooCopy));
+
+		    foo.foo("y").foo("x");
+		    bar.foo("x");
+
+		    System.out.println("foo.equals(bar) = " + foo.equals(bar));
 
         }
     }
