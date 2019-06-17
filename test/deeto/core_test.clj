@@ -138,6 +138,10 @@
     (.setIntArray int-dto-b int-array-a)
     (is (= true (.equals int-dto-a int-dto-b)))))
 
+(deftest test-builder
+  (let [string-dto (make-proxy deeto.StringDto)]
+    (is (= "foo" (-> string-dto (.string "foo") .getString)))))
+
 ;; TBD: P's int hashCode() implementation (of int Object.hashCode())
 ;; is consistent with P's boolean equals(Object) implementation.
 (deftest test-hash-code

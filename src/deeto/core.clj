@@ -6,10 +6,14 @@
    :state state
    :implements [deeto.ISerializable java.lang.reflect.InvocationHandler]))
 
-(defn info [x]
+(defn object-info
+  "Returns a map with some info about the argument. Used for
+  trouble-shooting."
+
+  [x]
   {:to-string (str x)
-   :class (.getClass x)
-   :interfaces (->> x .getClass .getInterfaces (into []))})
+   :class (when-not (nil? x) (.getClass x))
+   :interfaces (when-not (nil? x) (->> x .getClass .getInterfaces (into [])))})
 
 (defn ser-de-ser
   "Returns a deep clone. The clone is created by serializing and
@@ -19,8 +23,8 @@
   [x]
   {:post [(or (java.util.Arrays/deepEquals (into-array Object [x]) (into-array Object [%]))
               (throw (ex-info "Copy is not equal to original!"
-                              {:original (info x)
-                               :copy (info %)})))]}
+                              {:original (object-info x)
+                               :copy (object-info %)})))]}
   (if (nil? x) nil
       (with-open [baos (java.io.ByteArrayOutputStream.)
                   oos (java.io.ObjectOutputStream. baos)]
@@ -157,10 +161,10 @@
 (defn make-serializable-invocation-handler [handler-fn dto-type]
   (proxy [java.lang.reflect.InvocationHandler deeto.ISerializable] []
     (writeReplace []
-      (let [v {:value (handler-fn nil nil) :dto-type dto-type}]
+      (let [v {:value (handler-fn nil nil nil) :dto-type dto-type}]
         (deeto.SerializableInvocationHandler. v)))
     (invoke [the-proxy the-method the-args]
-      (handler-fn the-method the-args))))
+      (handler-fn the-proxy the-method the-args))))
 
 (defn make-proxy
   "Returns a Java dynamic proxy (_Deeto proxy_) for the given
@@ -187,13 +191,6 @@
         pt
         (make-serializable-invocation-handler handler-fn (first pt))))))
 
-(defn get-state
-  "Returns internal state (map) of Deeto proxy."
-
-  [p]
-  (.invoke (java.lang.reflect.Proxy/getInvocationHandler p)
-           nil nil nil))
-
 (defn handle-equals
   "Returns `true` if `@state` and the first value of `the-args` are
    equal in terms of `java.util.Arrays/deepEquals`."
@@ -213,11 +210,13 @@
       
       :else 
       (let [s1 (into-array Object (vals @state))
-            s2 (into-array Object (vals (get-state other)))]
+            s2 (into-array Object (vals (.invoke
+                                         (java.lang.reflect.Proxy/getInvocationHandler other)
+                                         nil nil nil)))]
         (java.util.Arrays/deepEquals s1 s2)))))
 
-(defn handler [clazz properties state the-method the-args]
-  ;; Special access to @state via null method (see get-state)
+(defn handler [clazz properties state the-proxy the-method the-args]
+  ;; Special access to @state via null method
   (if-not the-method @state
           (let [{:keys [method-name get-property set-property mutate-property return-type parameter-types]}
                 (reflect-on-method clazz the-method)]
@@ -234,9 +233,13 @@
               ;; leak to the outside (see "clone" below)
               set-property (swap! state assoc set-property (ser-de-ser (first the-args)))
 
+              ;; build-mutator acts like a setter but returns "this"
+              ;; for method chaining. Note that we *could* return a
+              ;; new instance BUT WE DO mutate. This is not a "factory
+              ;; with an argument"
               mutate-property (do
                                 (swap! state assoc mutate-property (ser-de-ser (first the-args)))
-                                nil)
+                                the-proxy)
               
               ;; TBD: how does this behave if serial form of DTO type
               ;; evolves (insert/remove properties, change property
