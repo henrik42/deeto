@@ -21,17 +21,21 @@
    the clone are `Arrays/deepEquals`. Returns `nil` for `nil`."
 
   [x]
-  {:post [(or (java.util.Arrays/deepEquals (into-array Object [x]) (into-array Object [%]))
+  {:post [(or (java.util.Arrays/deepEquals (into-array Object [x])
+                                           (into-array Object [%]))
               (throw (ex-info "Copy is not equal to original!"
                               {:original (object-info x)
                                :copy (object-info %)})))]}
-  (if (nil? x) nil
-      (with-open [baos (java.io.ByteArrayOutputStream.)
-                  oos (java.io.ObjectOutputStream. baos)]
-        (.writeObject oos x)
-        (with-open [bais (java.io.ByteArrayInputStream. (.toByteArray baos))
-                    ois (java.io.ObjectInputStream. bais)]
-          (.readObject ois)))))
+  (try 
+    (if (nil? x) nil
+        (with-open [baos (java.io.ByteArrayOutputStream.)
+                    oos (java.io.ObjectOutputStream. baos)]
+          (.writeObject oos x)
+          (with-open [bais (java.io.ByteArrayInputStream. (.toByteArray baos))
+                      ois (java.io.ObjectInputStream. bais)]
+            (.readObject ois))))
+    (catch Throwable t
+      (throw (ex-info (str "Creating copy failed: " t) (object-info x) t)))))
 
 (defn capitalize
   "Returns string argument with the first character converted to
