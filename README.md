@@ -224,10 +224,10 @@ Deeto.
 
             System.out.println("barCopy.equals(fooCopy) = " + barCopy.equals(fooCopy));
 
-		    foo.foo("y").foo("x");
-		    bar.foo("x");
+            foo.foo("y").foo("x");
+            bar.foo("x");
 
-		    System.out.println("foo.equals(bar) = " + foo.equals(bar));
+            System.out.println("foo.equals(bar) = " + foo.equals(bar));
 
         }
     }
