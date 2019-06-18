@@ -13,7 +13,8 @@
   [x]
   {:to-string (str x)
    :class (when-not (nil? x) (.getClass x))
-   :interfaces (when-not (nil? x) (->> x .getClass .getInterfaces (into [])))})
+   :interfaces (when-not (nil? x)
+                 (->> x .getClass .getInterfaces (into [])))})
 
 (defn ser-de-ser
   "Returns a deep clone. The clone is created by serializing and
@@ -49,7 +50,14 @@
     (str (.toUpperCase (subs s 0 1) java.util.Locale/ENGLISH)
          (subs s 1))))
 
-(defn reflect-on-method [clazz m]
+(defn reflect-on-method
+  "Inspects method `m` via reflection. Returns a map with
+  `:method-name`, `:return-type` and `:parameter-types`. In addition
+  keys `:get-property`, `:set-property` and `mutate-property` each
+  will be non-nil capitalized property-name when it's a getter, setter
+  or build-mutator respectively."
+  
+[clazz m]
   (let [n (.getName m)
         return-type (.getReturnType m)
         parameter-types (into [] (.getParameterTypes m))]
@@ -67,8 +75,8 @@
 
 (defn reflect-on
   "Inspects via reflection all methods of the DTO `clazz` and
-   determines the __properties__ by looking at __getter__ and
-   __setter__ methods.
+   determines the __properties__ by looking at __setter__,
+   __build-mutator__ and __getter__ methods.
 
    Throws if any of the properties are __inconsistent__ (e.g. type
    mismatch between getter and setter, wrong numer ob arguments, wrong
@@ -76,14 +84,22 @@
 
   [clazz]
   (reduce
-   (fn [res {:keys [method-name get-property set-property mutate-property return-type parameter-types] :as m}]
+   (fn [res {:keys [method-name
+                    get-property
+                    set-property
+                    mutate-property
+                    return-type
+                    parameter-types] :as m}]
      ;; Object.getClass() is not a DTO property-getter! TBD: do we
      ;; need this?
      (if-let [property-name (let [x (or get-property set-property mutate-property)]
                               (when-not (= "Class" x) x))]
        ;; method is a getter or setter
        (assoc res property-name 
-              (if-let [{:keys [property-type property-getter property-setter property-mutator] :as p} (res property-name)]
+              (if-let [{:keys [property-type
+                               property-getter
+                               property-setter
+                               property-mutator] :as p} (res property-name)]
                 ;; we've seen the property before
                 (assoc p
                   :property-getter
@@ -165,7 +181,17 @@
 (declare handler)
 
 ;; https://i-proving.com/2008/02/11/the-pitfalls-of-dynamic-proxy-serialization/
-(defn make-serializable-invocation-handler [handler-fn dto-type]
+(defn make-serializable-invocation-handler
+  "Returns a `proxy` implementing
+  `java.lang.reflect.InvocationHandler` (with handler `handler-fn`)
+  and `deeto.ISerializable`. On serialization the `proxy` will
+  `writeReplace` a `deeto.SerializableInvocationHandler` with the DTOs
+  current value. We need this _serialization_ _indirection_ because
+  Clojure `proxy` (and the `handler-fn`) is not `Serializable`. Note
+  that `handler-fn` must return the DTO's value when being invoked
+  with `nil` for `the-method` (see `handler` function)."
+
+  [handler-fn dto-type]
   (proxy [java.lang.reflect.InvocationHandler deeto.ISerializable] []
     (writeReplace []
       (let [v {:value (handler-fn nil nil nil) :dto-type dto-type}]
@@ -176,8 +202,9 @@
 (defn make-proxy
   "Returns a Java dynamic proxy (_Deeto proxy_) for the given
    interface(s). Any invocation on the proxy will be delegated to the
-   `handler-fn` which should be a function of `the-method` and
-   `the-args` of `java.lang.reflect.InvocationHandler/invoke`.
+   `handler-fn` which should be a function of `the-proxy`,
+   `the-method` and `the-args` of
+   `java.lang.reflect.InvocationHandler/invoke`.
 
    Calling the overloaded 1-arity variant will create a `handler-fn`
    which keeps an internal state `atom` and delegates calls and the
@@ -222,7 +249,38 @@
                                          nil nil nil)))]
         (java.util.Arrays/deepEquals s1 s2)))))
 
-(defn handler [clazz properties state the-proxy the-method the-args]
+(defn handler
+  "Invokation handler for Deeto's DTO proxies. Implements the
+  state-keeping-semantics for Deeto's DTOs. Note that the (ref)
+  `state` is an argument to this function. The encapsulation of
+  state (closure) will happen by using `partial`.
+
+  Handles these cases:
+
+   * if invoked with `nil` argument for `the-method` returns `@state`.
+
+   * if `the-method` is a getter (as of `reflect-on-method`) returns
+     the property's value.
+
+   * if `the-method` is a setter (as of `reflect-on-method`) sets the
+     property's value.
+
+   * if `the-method` is a mutator (as of `reflect-on-method`) sets the
+     property's value and returns the DTO's proxy.
+
+   * if `the-method` is `clone` returns a new DTO proxy with the same
+     state's value (__not__ with the same mutable `state`).
+
+   * if `the-method` is `equals` returns `true` if the argument is
+     equals to `clazz/state` (see `handle-equals`).
+
+   * if `the-method` is `hashCode` returns a hash-code consistent with
+     `equals`.
+
+   * if `the-method` is `toString` returns a string for human
+     consumptions."
+
+  [clazz properties state the-proxy the-method the-args]
   ;; Special access to @state via null method
   (if-not the-method @state
           (let [{:keys [method-name get-property set-property mutate-property return-type parameter-types]}
