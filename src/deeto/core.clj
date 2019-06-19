@@ -64,8 +64,10 @@
     {:method-name n
      :get-property (-> (re-matches #"get(.+)" n) second)
      :set-property (-> (re-matches #"set(.+)" n) second)
-     :mutate-property (when (and (= clazz return-type)
-                                 (= 1 (count parameter-types)))
+     :mutate-property (when (and
+                             (not= "fromMap" n)
+                             (= clazz return-type)
+                             (= 1 (count parameter-types)))
                         (capitalize n))
      :return-type return-type 
      :parameter-types parameter-types}))
@@ -278,12 +280,23 @@
      `equals`.
 
    * if `the-method` is `toString` returns a string for human
-     consumptions."
+     consumptions.
+
+   * if `the-method` is `toMap` returns a `Map<String, Object>` which
+     maps each property name (capitalized; e.g. `\"FooBar\"`) to its
+     cloned/copied value.
+
+  "
 
   [clazz properties state the-proxy the-method the-args]
   ;; Special access to @state via null method
   (if-not the-method @state
-          (let [{:keys [method-name get-property set-property mutate-property return-type parameter-types]}
+          (let [{:keys [method-name
+                        get-property
+                        set-property
+                        mutate-property
+                        return-type
+                        parameter-types]}
                 (reflect-on-method* clazz the-method)]
             (cond
               ;; getter returns deep-copy/clone of property's
@@ -296,6 +309,8 @@
               ;; state. So references in/to the argument value will
               ;; not become part of the internal state and thus do not
               ;; leak to the outside (see "clone" below)
+              ;;
+              ;; TBD: check property type
               set-property (swap! state assoc set-property (ser-de-ser (first the-args)))
 
               ;; build-mutator acts like a setter but returns "this"
@@ -303,8 +318,13 @@
               ;; new instance BUT WE DO mutate. This is not a "factory
               ;; with an argument"
               mutate-property (do
+                                ;; TBD check type!!
                                 (swap! state assoc mutate-property (ser-de-ser (first the-args)))
                                 the-proxy)
+
+              ;; TBD: these should be handled like the methods above -
+              ;; i.e. `reflect-on-method` should capture their type so
+              ;; that we need not to = on the method-name here.
               
               ;; TBD: how does this behave if serial form of DTO type
               ;; evolves (insert/remove properties, change property
@@ -333,6 +353,15 @@
               
               (= "toString" method-name) (str {:type clazz :value @state})
 
+              (= "toMap" method-name) (java.util.HashMap. (ser-de-ser @state))
+
+              (= "fromMap" method-name)
+              (do
+                ;; TBD: check property name and type!!!
+                (doseq [p (->> the-args first .entrySet (into []))]
+                  (swap! state assoc (.getKey p) (ser-de-ser (.getValue p))))
+                the-proxy)
+              
               :else (throw (ex-info "Unknown invocation"
                                     {:properties properties
                                      :state state

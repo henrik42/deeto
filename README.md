@@ -99,9 +99,9 @@ With Deeto you're not using a seperate builder but you're using the
 stateful DTO directly. So all this feature gives you is the option to
 use method chaining on _build-mutators_ instead of calling setters.
 
-__Note__: the _build-mutators_ __are__ __mutators__ and not factory
-methods. So they act like setters and they return the instance (proxy)
-on which they are invoked.
+__Note__: the _build-mutators_ __are__ __mutators__ and not
+__factory__ __methods__. So they act like setters and they return the
+instance (proxy) on which they are invoked.
 
 The _build-mutators_ (methods) of some interface `I` are discovered by
 Deeto via their signature:
@@ -123,6 +123,30 @@ _build-mutator_ for a property even if those have limited usability.
 [1] https://en.wikipedia.org/wiki/Builder_pattern  
 [2] https://en.wikipedia.org/wiki/Fluent_interface  
 
+## Map-based access
+
+DTOs behave almost like mutable maps with typed key/values
+(properties). Deeto supports __converting__ between __maps__ and
+__DTOs__.
+
+The DTO's interface can/may define
+
+	java.util.Map<String, Object> toMap();
+
+When this method is called on a Deeto proxy it returns a map which
+maps each/all property name (capitalized string; e.g. "FooBar") to its
+cloned/copied value (possibly nil). I.e. the map will contain an entry
+for each (all!) property.
+
+The DTO's interface can/may also define
+
+    <T> T fromMap(java.util.Map<String, Object> source);
+
+When this method is called on a Deeto proxy it will use the entries in
+`source` to set the property values of the instance on which the
+method was called. It then returns the (mutated) instance. So this is
+a __mutator__ and __not a factory__.
+
 ## Immutability
 
 Deeto's proxys are __mutable, stateful containers__ with getters and
@@ -133,15 +157,15 @@ __immutable__.
 So Deeto's setter implementation creates a _serialization copy_ (see
 above) or _defensive copy_ [1, 2] of its argument value (which
 therefore must be `Serializable` [4]). So there is no way for users of
-Deeto to give a setter method a mutable object and keep a reference to
-that object through which the client could afterwards change that very
-object and thus change the DTO's value _behind the scene_. The only
-way to change the __property__ is by using the setter. There just __is
-no way you can change a value__ [3].
+Deeto to give a setter method (or one of the mutators) a mutable
+object and keep a reference to that object through which the client
+could afterwards change that very object and thus change the DTO's
+value _behind the scene_. The only way to change the __property__ is
+by using the setters/mutators. There just __is no way you can change a
+value__ [3].
 
-The same is true for Deeto's getter which also return only a
-_defensive copy_ of their internal (possibly mutable) value
-object.
+The same is true for Deeto's getter/toMap which also return only a
+_defensive copy_ of their internal (possibly mutable) value object.
 
 [1] http://www.javacreed.com/what-is-defensive-copying/  
 [2] http://www.javapractices.com/topic/TopicAction.do?Id=15  
@@ -177,8 +201,10 @@ method in there too (which will be ignored by Deeto).
 Note that `SomeDto extends deeto.IDeeto` so that the DTO type
 implements `Cloneable` and `Serializable` __and__ has a `public`
 `clone` method so that `clone` can be called without problems (and no
-need to cast). Using `deeto.IDeeto` is totally optional for using
-Deeto.
+need to cast). The interface also has definitions for `fromMap` and
+`toMap` (see above).
+
+Using `deeto.IDeeto` is totally optional for using Deeto.
 
     package deeto_user;
 
@@ -229,6 +255,12 @@ Deeto.
 
             System.out.println("foo.equals(bar) = " + foo.equals(bar));
 
+            Map fooMap = new HashMap();
+            fooMap.put("Bar", 42);
+            System.out.println("foo.fromMap(fooMap) = " + foo.fromMap(fooMap));
+
+            System.out.println("foo.toMap() = " + foo.toMap());
+
         }
     }
 
@@ -236,6 +268,9 @@ Deeto.
   Clojure release.
 
 ## Notes
+
+* setters and mutators do only some checks on their arguments. These
+  checks will become stricter in future releases.
 
 * `toString()` implementation is __not stable yet__. So you have to
   expect __changes in future releases__.

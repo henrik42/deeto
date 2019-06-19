@@ -14,5 +14,27 @@ package deeto;
  * clone() method.
  */
 public interface IDeeto extends java.io.Serializable, Cloneable {
+    
+    /**
+     * Returns a deep copy of this.
+     */
     <T> T clone();
+    
+    /**
+     * Returns a map which maps each property name (capitalized
+     * string; e.g. "FooBar") to its cloned/copied value (possibly
+     * null). I.e. the map will contain an entry for each property.
+     */
+    java.util.Map<String, Object> toMap();
+
+    /**
+     * Iterates over source's entry set. For each entry the key is
+     * used as the property name and that property will be set to the
+     * entry's (cloned/copied) value. So this method is a
+     * mutator. It's not a factory.
+     * 
+     * Returns the mutated this.
+     */
+    <T> T fromMap(java.util.Map<String, Object> source);
+
 }
