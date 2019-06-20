@@ -134,9 +134,9 @@ The DTO's interface can/may define
 	java.util.Map<String, Object> toMap();
 
 When this method is called on a Deeto proxy it returns a map which
-maps each/all property name (capitalized string; e.g. "FooBar") to its
-cloned/copied value (possibly nil). I.e. the map will contain an entry
-for each (all!) property.
+maps each/all property name (capitalized string; e.g. `"FooBar"`) to
+its cloned/copied value (possibly `nil`). I.e. the map will contain an
+entry for each (all!) property.
 
 The DTO's interface can/may also define
 
@@ -177,6 +177,28 @@ _defensive copy_ of their internal (possibly mutable) value object.
   Deeto aims to support. I hope that DTOs usually contain
   `Serializable` typed values so that this restriction does not hinder
   the applicability of Deeto.
+
+## Concurrency
+
+Deeto proxies are __not thread-safe__ _per se_! I.e. the Clojure stuff
+__is__ thread-safe [1] but serialization of the __mutable__
+__property__ __values__ may or may not be thread-safe depending on the
+classes involved.
+
+Note that the critical part is the cloneing/copying of argument values
+via serialization (which may or may not be affected by
+__race-conditions__) when invoking setters and mutators. Once the
+values have been copied any further access to the DTO (even the
+mutation of the DTO's internal state) __is thread-safe__!
+
+So Deeto can make no guarantee on the overall thread-safeness.
+
+[1] Internally Deeto uses persistent/immutable maps [2] to store
+property values and `swap!` [3] to mutate this state `atom` [4]. All
+that is thread-safe.  
+[2] https://clojure.org/reference/data_structures#Maps  
+[3] https://clojure.org/reference/refs  
+[4] https://clojure.org/reference/atoms  
 
 ## Usage
 
