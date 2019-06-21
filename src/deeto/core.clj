@@ -50,6 +50,15 @@
     (str (.toUpperCase (subs s 0 1) java.util.Locale/ENGLISH)
          (subs s 1))))
 
+(defn swap-state [properties state property-name value]
+  (if-let [{:keys [property-type]} (properties property-name)]
+    (swap! state assoc property-name (ser-de-ser value))
+    (throw (ex-info (format "Unknown property-name '%s'." property-name)
+                    {:properties properties
+                     :state state
+                     :property-name property-name
+                     :value value}))))
+
 (defn reflect-on-method
   "Inspects method `m` via reflection. Returns a map with
   `:method-name`, `:return-type` and `:parameter-types`. In addition
@@ -309,17 +318,16 @@
               ;; state. So references in/to the argument value will
               ;; not become part of the internal state and thus do not
               ;; leak to the outside (see "clone" below)
-              ;;
-              ;; TBD: check property type
-              set-property (swap! state assoc set-property (ser-de-ser (first the-args)))
+              set-property (swap-state properties state set-property (first the-args))
+              #_ (swap! state assoc set-property (ser-de-ser (first the-args)))
 
               ;; build-mutator acts like a setter but returns "this"
               ;; for method chaining. Note that we *could* return a
               ;; new instance BUT WE DO mutate. This is not a "factory
               ;; with an argument"
               mutate-property (do
-                                ;; TBD check type!!
-                                (swap! state assoc mutate-property (ser-de-ser (first the-args)))
+                                (swap-state properties state mutate-property (first the-args))
+                                #_ (swap! state assoc mutate-property (ser-de-ser (first the-args)))
                                 the-proxy)
 
               ;; TBD: these should be handled like the methods above -
@@ -359,7 +367,8 @@
               (do
                 ;; TBD: check property name and type!!!
                 (doseq [p (->> the-args first .entrySet (into []))]
-                  (swap! state assoc (.getKey p) (ser-de-ser (.getValue p))))
+                  (swap-state properties state (.getKey p) (.getValue p))
+                  #_ (swap! state assoc (.getKey p) (ser-de-ser (.getValue p))))
                 the-proxy)
               
               :else (throw (ex-info "Unknown invocation"
