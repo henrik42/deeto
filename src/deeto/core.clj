@@ -108,6 +108,9 @@
                      :property-name property-name
                      :value value}))))
 
+(defn falsy->nil [x]
+  (or x nil))
+                 
 (defn reflect-on-method
   "Inspects method `m` via reflection. Returns a map with
   `:method-name`, `:return-type` and `:parameter-types`. In addition
@@ -120,8 +123,20 @@
         return-type (.getReturnType m)
         parameter-types (into [] (.getParameterTypes m))]
     {:method-name n
-     :get-property (-> (re-matches #"get(.+)" n) second)
-     :set-property (-> (re-matches #"set(.+)" n) second)
+     :get-property (falsy->nil
+                    (and
+                     (empty? parameter-types)
+                     (not= java.lang.Void/TYPE return-type)
+                     (or
+                      (-> (re-matches #"get([A-Z].+)" n) second)
+                      (and
+                       (= java.lang.Boolean/TYPE return-type)
+                       (-> (re-matches #"is([A-Z].+)" n) second)))))
+     :set-property (falsy->nil
+                    (and
+                     (= 1 (count parameter-types))
+                     (= java.lang.Void/TYPE return-type)
+                     (-> (re-matches #"set([A-Z].+)" n) second)))
      :mutate-property (when (and
                              (not= "fromMap" n)
                              (= clazz return-type)
@@ -171,11 +186,6 @@
                             (not= property-type return-type)
                             (throw (ex-info "Getter's type mismatch" {:res res :m m}))
                             
-                            (or 
-                             (not (empty? parameter-types))
-                             (= java.lang.Void/TYPE return-type))
-                            (throw (ex-info "Not a valid getter" {:res res :m m}))
-                            
                             :else method-name))
                   
                   :property-setter
@@ -186,11 +196,6 @@
                             
                             (not= property-type (first parameter-types))
                             (throw (ex-info "Setter's type mismatch" {:res res :m m}))
-                            
-                            (or 
-                             (not= 1 (count parameter-types))
-                             (not= java.lang.Void/TYPE return-type))
-                            (throw (ex-info "Not a valid setter" {:res res :m m}))
                             
                             :else method-name))
 
@@ -210,24 +215,10 @@
                  :property-type (if (or set-property mutate-property)
                                   (first parameter-types)
                                   return-type)
-                 :property-mutator (when mutate-property 
-                                     method-name)
-                 :property-getter (when get-property
-                                    ;; DRY! This repeats the stuff from aboe
-                                    (cond
-                                      (or 
-                                       (not (empty? parameter-types))
-                                       (= java.lang.Void/TYPE return-type))
-                                      (throw (ex-info "Not a valid getter" {:res res :m m}))
-                                      :else method-name))
-                 :property-setter (when set-property
-                                    (cond
-                                      ;; DRY! This repeats the stuff from aboe
-                                      (or 
-                                       (not= 1 (count parameter-types))
-                                       (not= java.lang.Void/TYPE return-type))
-                                      (throw (ex-info "Not a valid setter" {:res res :m m}))
-                                      :else method-name))}))
+                 :property-mutator (when mutate-property method-name)
+                 :property-getter (when get-property method-name)
+                 :property-setter (when set-property method-name)}))
+
        ;; Method is non-getter/setter (like equals, hashCode, clone,
        ;; readResolve,...) So we ignore it here! We could check that
        ;; it is one of the known other methods that we support.
