@@ -50,9 +50,58 @@
     (str (.toUpperCase (subs s 0 1) java.util.Locale/ENGLISH)
          (subs s 1))))
 
-(defn swap-state [properties state property-name value]
+(defn compatible-types?
+  "Returns truthy if the `property-type` is assignable from the
+   `value-type`.
+
+   Note: for properties with native types (like `int` and `byte` etc.)
+   Deeto will receive their corresponding _object-typed value_ (like
+   `Integer` and `Byte`) via reflective invocation (e.g. when clients
+   call a setter). For these cases `Class/isAssignableFrom` will
+   return `false` when comparing directly. So this function takes care
+   of these cases explicitly."
+
+  [property-type value-type]
+  (or (.isAssignableFrom property-type value-type)
+      (= value-type
+         ({Boolean/TYPE Boolean
+           Byte/TYPE Byte
+           Character/TYPE Character
+           Double/TYPE Double
+           ;; Enums???
+           Float/TYPE Float
+           Integer/TYPE Integer
+           Long/TYPE Long
+           Short/TYPE short
+           }
+          property-type))))
+
+(defn swap-state
+  "Sets (swaps!) property `property-name` of map `@state` to the
+   clone/deep-copy of `value`.
+
+   Throws if `property-name` is an unknown property (i.e. is not an
+   entry in `properties`).
+
+   Throws if the property's type (given in `properties`) is not
+   type-compatible (as of `compatible-types?`) with `value`."
+
+  [properties state property-name value]
   (if-let [{:keys [property-type]} (properties property-name)]
-    (swap! state assoc property-name (ser-de-ser value))
+    (if (or (nil? value)
+            (compatible-types? property-type (.getClass value)))
+      (swap! state assoc property-name (ser-de-ser value))
+      (throw (ex-info (format "Incompatible value type '%s/%s' for property %s/%s"
+                              value
+                              (.getClass value)
+                              property-name
+                              property-type)
+                      {:properties properties
+                       :state state
+                       :property-name property-name
+                       :property-type property-type
+                       :value value
+                       :value-type (.getClass value)})))
     (throw (ex-info (format "Unknown property-name '%s'." property-name)
                     {:properties properties
                      :state state
@@ -250,6 +299,7 @@
       (nil? other)
       false
 
+      ;; this is brittle....is it?
       (not= [clazz java.io.Serializable Cloneable] (->> other .getClass .getInterfaces (into [])))
       false
       
@@ -295,7 +345,10 @@
      maps each property name (capitalized; e.g. `\"FooBar\"`) to its
      cloned/copied value.
 
-  "
+   * if `the-method` is `fromMap` consumes all entries
+     `[property-name, property-value]` in the `Map<String, Object>`
+     argument and sets the properties in `state` to the cloned/copied
+     value. Returns `the-proxy`."
 
   [clazz properties state the-proxy the-method the-args]
   ;; Special access to @state via null method
@@ -319,7 +372,6 @@
               ;; not become part of the internal state and thus do not
               ;; leak to the outside (see "clone" below)
               set-property (swap-state properties state set-property (first the-args))
-              #_ (swap! state assoc set-property (ser-de-ser (first the-args)))
 
               ;; build-mutator acts like a setter but returns "this"
               ;; for method chaining. Note that we *could* return a
@@ -327,7 +379,6 @@
               ;; with an argument"
               mutate-property (do
                                 (swap-state properties state mutate-property (first the-args))
-                                #_ (swap! state assoc mutate-property (ser-de-ser (first the-args)))
                                 the-proxy)
 
               ;; TBD: these should be handled like the methods above -
@@ -365,10 +416,8 @@
 
               (= "fromMap" method-name)
               (do
-                ;; TBD: check property name and type!!!
                 (doseq [p (->> the-args first .entrySet (into []))]
-                  (swap-state properties state (.getKey p) (.getValue p))
-                  #_ (swap! state assoc (.getKey p) (ser-de-ser (.getValue p))))
+                  (swap-state properties state (.getKey p) (.getValue p)))
                 the-proxy)
               
               :else (throw (ex-info "Unknown invocation"
