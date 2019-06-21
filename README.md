@@ -138,6 +138,10 @@ maps each/all property name (capitalized string; e.g. `"FooBar"`) to
 its cloned/copied value (possibly `nil`). I.e. the map will contain an
 entry for each (all!) property.
 
+Note that values for properties with __native__ type (like `int` and
+`float`) will be returned with their __wrapper__ class (like `Integer`
+and `Float`) [1].
+
 The DTO's interface can/may also define
 
     <T> T fromMap(java.util.Map<String, Object> source);
@@ -146,6 +150,16 @@ When this method is called on a Deeto proxy it will use the entries in
 `source` to set the property values of the instance on which the
 method was called. It then returns the (mutated) instance. So this is
 a __mutator__ and __not a factory__.
+
+Again you have to supply wrapper-typed values for properties with
+native type.
+
+Note that this method throws an exception if any given value is not
+type-compatible (as of `assignableFrom`) with the corresponding
+property. Wrapper-types are handled as exspected. No other conversion,
+transformation, cast etc. is done though.
+
+[1] https://www.w3schools.com/java/java_wrapper_classes.asp
 
 ## Immutability
 
