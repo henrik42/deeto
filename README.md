@@ -214,6 +214,38 @@ that is thread-safe.
 [3] https://clojure.org/reference/refs  
 [4] https://clojure.org/reference/atoms  
 
+## Mapping DTOs
+
+When using DTOs you often need to __map__ between DTOs and other
+classes/containers (like JPA entities) back and forth.
+
+_Mapping_ means to use a getter on one container to retrieve a value
+and then use that value with a setter on another container.
+
+The source and target properties in those containers may or may not
+have the same __name__. If they have different __types__ then one
+needs to __convert__ the source-typed value to a target-typed value
+before using the setter.
+
+In some cases one may even want/have to apply some sort of _business
+logic_ to the mapping (like special/default values, handling of
+`null`s and more).
+
+Deeto does not support mappings in any special way. There are other
+Java tools for that [1]:
+
+* http://mapstruct.org/
+
+* https://github.com/modelmapper/modelmapper
+
+* https://dozermapper.github.io/
+
+* https://orika-mapper.github.io/orika-docs/
+
+* https://github.com/jmapper-framework/jmapper-core
+
+[1] https://www.baeldung.com/java-performance-mapping-frameworks
+
 ## Usage
 
 You can download Deeto JAR from clojars:
