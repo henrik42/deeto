@@ -235,13 +235,9 @@ Deeto does not support mappings in any special way. There are other
 Java tools for that [1]:
 
 * http://mapstruct.org/
-
 * https://github.com/modelmapper/modelmapper
-
 * https://dozermapper.github.io/
-
 * https://orika-mapper.github.io/orika-docs/
-
 * https://github.com/jmapper-framework/jmapper-core
 
 [1] https://www.baeldung.com/java-performance-mapping-frameworks
