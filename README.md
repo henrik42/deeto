@@ -18,7 +18,7 @@ factory will return a new instance `i` with the following properties:
   the __property__ (see below) `q` of type `Q`. Calling
   _build-mutator_ `I <q>(<Q>)` will also set property `q` but return
   `i`. Calling `Q get<q>()` (of `I`) on `i` will return `i`'s current
-  value of property `q` of type `Q`. These stateful semantics are
+  value of property `q` of type `Q` [9]. These stateful semantics are
   implemented in the _handler_.
 
 * `P`'s `boolean equals(Object o)` implementation (of `boolean
@@ -52,7 +52,9 @@ factory will return a new instance `i` with the following properties:
 [8] Implementation note: at the moment `clone()` does __not__ use
     serialization but just creates a new proxy with the original's
     value. This may change in future releases though.
-
+[9] If `Q` is `boolean` (not `Boolean`!) getters of the form `boolean
+  is<q>()` are also recognized.
+	
 ## Properties
 
 Data transfer objects are __mutable containers__ -- used to transport
@@ -398,3 +400,6 @@ Using `deeto.IDeeto` is totally optional for using Deeto.
 ## TODOS
 
 * add documentation about serial form
+* native-types properties are not "initialzed" and getting them throws
+  a NullPointerException.
+* say something about double/Double mismatch.
