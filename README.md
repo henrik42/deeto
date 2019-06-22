@@ -51,9 +51,9 @@ factory will return a new instance `i` with the following properties:
 [7] https://www.journaldev.com/17129/java-deep-copy-object  
 [8] Implementation note: at the moment `clone()` does __not__ use
     serialization but just creates a new proxy with the original's
-    value. This may change in future releases though.
+    value. This may change in future releases though.  
 [9] If `Q` is `boolean` (not `Boolean`!) getters of the form `boolean
-  is<q>()` are also recognized.
+  is<q>()` are also recognized.  
 	
 ## Properties
 
