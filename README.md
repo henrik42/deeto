@@ -76,18 +76,18 @@ setter for a property even if those have limited usability.
 
 ## Fluent interface/builder pattern
 
-A builder [1] is a stateful-container that lets you set/build state
-(values) and then finally use it as a factory for some object. Usually
-the builder will provide "setter"-methods that can be *chained*
-(fluent API [2]).
+A builder [1] is a stateful-container that lets you set/build/collect
+state (values) and then finally use it as a factory for some
+object. Usually the builder will provide "setter"-methods that can be
+*chained* (fluent API [2]).
 
 Deeto supports this kind of usage by providing/supporting
 implementations for (_build-mutator_) methods of the form `I
 <q>(<Q>)`.
 
 **Example:** here the property `foo` of some `SomeDto dto` can be set
-  via `dto.foo(String)` which returns `dto` (i.e. the instance that
-  the method was invoked on).
+  via `dto.foo(String)` which returns `dto` (i.e. the __mutated__
+  instance that the method was invoked on).
 
     interface SomeDto extends IDeeto {
 
@@ -101,10 +101,10 @@ use method chaining on _build-mutators_ instead of calling setters.
 
 __Note__: the _build-mutators_ __are__ __mutators__ and not
 __factory__ __methods__. So they act like setters and they return the
-instance (proxy) on which they are invoked.
+__mutated__ instance (proxy) on which they are invoked.
 
 The _build-mutators_ (methods) of some interface `I` are discovered by
-Deeto via their signature:
+Deeto through their signature:
 
 * their return type is `I`
 * they take one argument
@@ -118,10 +118,60 @@ releases!):
   _build-mutator_ for `q`.
 
 __Note:__ Deeto supports interface-definitions with just a
-_build-mutator_ for a property even if those have limited usability.
+_build-mutator_ for a property and no getter even if those have
+limited usability.
 
 [1] https://en.wikipedia.org/wiki/Builder_pattern  
 [2] https://en.wikipedia.org/wiki/Fluent_interface  
+
+## Read-only views to DTOs
+
+Sometimes you may want to construct a DTO but then give clients just
+read-only access to the DTO. At the moment Deeto has no special
+feature for this use-case.
+
+But you can implement this by using __two__ interfaces to define the
+DTO: one `public` `interface` for the read-only access for the client
+and an additional _builder_ `interface` for your factory [1].
+
+__Example:__ Here we define `FooDto` with two properties. The factory
+method `FooDto.newInstance` uses (the just locally visable)
+`FooBuilder` with the mutating builder methods. Clients access the DTO
+through the read-only view `FooDto`.
+
+    package deeto_user;
+
+    import deeto.Deeto;
+    import deeto.IDeeto;
+
+    interface FooBuilder extends FooDto {
+
+        FooBuilder foo(long x);
+        FooBuilder bar(String x);
+
+    }
+
+    public interface FooDto extends IDeeto {
+
+        long getFoo();
+        String getBar();
+
+        static FooDto newInstance(long foo, String bar) {
+            return Deeto.factory().newInstance(FooBuilder.class).foo(foo).bar(bar);
+        }
+    }
+
+Note that this DTO is __not immutable__ _per se_. Deeto has no feature
+that let's you express that. It's just the case that there aren't any
+mutators accessible to clients (other than using reflection ...).
+
+[1] Deeto could have used true factory-like builder-methods instead of
+making them a mutator. Then you could have put them into just one
+interface and still implement the read-only view. But then builders
+would create a new instance/clone each time they're called which
+introduces a performance penalty (which I haven't measured -- of
+course ;-) Anyway, they are mutators and the pattern from above should
+work fine.
 
 ## Map-based access
 
