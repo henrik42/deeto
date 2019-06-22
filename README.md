@@ -319,6 +319,16 @@ Java tools for that [1]:
 
 [1] https://www.baeldung.com/java-performance-mapping-frameworks
 
+## Performance
+
+I haven't done any performance measurements. But I expect Deeto to be
+orders of magnitude slower than a Java implementation of the DTO
+classes.
+
+This may or may not be a problem for your use-case.
+
+[1] https://dzone.com/articles/java-reflection-but-faster
+
 ## Usage
 
 You can download Deeto JAR from clojars:
