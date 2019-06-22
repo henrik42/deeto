@@ -76,6 +76,31 @@ setter for a property even if those have limited usability.
   the other.  
 [2] https://en.wikipedia.org/wiki/JavaBeans
 
+## Native-typed properties
+
+Deeto supports native-typed properties (like `boolean` and
+`double`). Internally these values are stored as objects of their
+wrapper classes (like `Boolean` and `Double`).
+
+Java has a mismatch when it comes to compare floating point values
+[1]. You have `0.0 == -0.0` is `true` but `new Double(-0.0).equals(new
+Double(0.0))` is `false.
+
+So when using `float` and `double` typed properties rememeber that
+Deeto's `equals` logic is based on `equals` and not on `==`!
+
+Special care must be taken when refactoring existing Java code which
+used to implement `equals` with `==` to using Deeto [2].
+
+As a side note: notice that `Arrays.equals(new double[] { -0.0 }, new
+double[] { 0.0 })` is `false` which puzzles me but the Java docs for
+`Arrays.equals(double[], double[])` say just that.
+
+[1] https://stackoverflow.com/questions/45544180/signed-zero-double-equals-as-in-but-double-comparedouble-double-0/45544483  
+[2] Deeto could implement a special treatment when comparing
+  natives. This feature has not been implemented yet though but will
+  be.
+
 ## Fluent interface/builder pattern
 
 A builder [1] is a stateful-container that lets you set/build/collect
