@@ -162,29 +162,29 @@ DTO: one `public` `interface` for the read-only access for the client
 and an additional _builder_ `interface` for your factory [1].
 
 __Example:__ Here we define `FooDto` with two properties. The factory
-method `FooDto.newInstance` uses (the just locally visable)
-`FooBuilder` with the mutating builder methods. Clients access the DTO
-through the read-only view `FooDto`.
+method `FooDto.newInstance` uses (the just locally visable) `Builder`
+with the mutating builder methods. Clients access the DTO through the
+read-only view `FooDto`.
 
     package deeto_user;
 
     import deeto.Deeto;
     import deeto.IDeeto;
 
-    interface FooBuilder extends FooDto {
+    interface Builder extends FooDto {
 
-        FooBuilder foo(long x);
-        FooBuilder bar(String x);
+        Builder foo(long x);
+        Builder bar(boolean x);
 
     }
 
-    public interface FooDto extends IDeeto<FooDto> {
+    public interface FooDto extends IDeeto<Builder> {
 
         long getFoo();
-        String getBar();
+        boolean isBar();
 
-        static FooDto newInstance(long foo, String bar) {
-            return Deeto.factory().newInstance(FooBuilder.class).foo(foo).bar(bar);
+        static FooDto newInstance(long foo, boolean bar, double doo) {
+            return Deeto.factory().newInstance(Builder.class).foo(foo).bar(bar);
         }
     }
 
