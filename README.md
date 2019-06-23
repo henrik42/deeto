@@ -116,7 +116,7 @@ implementations for (_build-mutator_) methods of the form `I
   via `dto.foo(String)` which returns `dto` (i.e. the __mutated__
   instance that the method was invoked on).
 
-    interface SomeDto extends IDeeto {
+    interface SomeDto extends IDeeto<SomeDto> {
 
         String getFoo();
         void setFoo(String x);
@@ -178,7 +178,7 @@ through the read-only view `FooDto`.
 
     }
 
-    public interface FooDto extends IDeeto {
+    public interface FooDto extends IDeeto<FooDto> {
 
         long getFoo();
         String getBar();
@@ -362,7 +362,7 @@ Using `deeto.IDeeto` is totally optional for using Deeto.
     import deeto.Deeto;
     import deeto.IDeeto;
 
-    interface SomeDto extends IDeeto {
+    interface SomeDto extends IDeeto<SomeDto> {
 
         String getFoo();
         void setFoo(String x);

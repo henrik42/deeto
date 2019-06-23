@@ -13,12 +13,12 @@ package deeto;
  * method so that the DTOs can be "cloned" by calling the accessable
  * clone() method.
  */
-public interface IDeeto extends java.io.Serializable, Cloneable {
+public interface IDeeto<T> extends java.io.Serializable, Cloneable {
     
     /**
      * Returns a deep copy of this.
      */
-    <T> T clone();
+    T clone();
     
     /**
      * Returns a map which maps each property name (capitalized
@@ -35,6 +35,6 @@ public interface IDeeto extends java.io.Serializable, Cloneable {
      * 
      * Returns the mutated this.
      */
-    <T> T fromMap(java.util.Map<String, Object> source);
+    T fromMap(java.util.Map<String, Object> source);
 
 }
