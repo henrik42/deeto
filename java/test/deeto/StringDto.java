@@ -5,3 +5,4 @@ public interface StringDto extends java.io.Serializable, java.lang.Cloneable {
     void setString(String x);
     StringDto string(String x);
 }
+

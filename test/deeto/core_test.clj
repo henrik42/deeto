@@ -147,3 +147,11 @@
 (deftest test-hash-code
   (let [int-dto (make-proxy deeto.intDto)]))
 
+(deftest test-double
+  (let [double-dto-a (doto (make-proxy deeto.DoubleDto)
+                       (.doubleProp 0.0)
+                       (.nativeDoubleProp 0.0))
+        double-dto-b (doto (make-proxy deeto.DoubleDto)
+                       (.doubleProp 0.0)
+                       (.nativeDoubleProp -0.0))]
+    (is (= double-dto-a double-dto-b))))

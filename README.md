@@ -84,9 +84,9 @@ wrapper classes (like `Boolean` and `Double`).
 
 Java has a mismatch when it comes to compare floating point values
 [1]. You have `0.0 == -0.0` is `true` but `new Double(-0.0).equals(new
-Double(0.0))` is `false.
+Double(0.0))` is `false`.
 
-So when using `float` and `double` typed properties rememeber that
+So when using `float` and `double` typed properties remember that
 Deeto's `equals` logic is based on `equals` and not on `==`!
 
 Special care must be taken when refactoring existing Java code which

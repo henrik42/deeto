@@ -6,6 +6,9 @@
    :state state
    :implements [deeto.ISerializable java.lang.reflect.InvocationHandler]))
 
+(defn -init [v]
+  [[] v])
+  
 (defn object-info
   "Returns a map with some info about the argument. Used for
   trouble-shooting."
@@ -276,11 +279,42 @@
         pt
         (make-serializable-invocation-handler handler-fn (first pt))))))
 
+(defn property-equals?
+  "Compares the two properties (name and value). `double` and `float`
+  consider `0.0 == -0.0`. Returns `true` when equal."
+
+  [[property-name {:keys [property-type]}] [prop-a val-a] [prop-b val-b]]
+  (if (not= property-name prop-a prop-b)
+    (throw (ex-info "Types do not match!" {:property-name property-name
+                                           :prop-a prop-a
+                                           :prop-b prop-b}))
+    (cond
+      (nil? val-a) (nil? val-b)
+      (nil? val-b) (nil? val-a)
+      (-> val-a .getClass .isArray) (java.util.Arrays/deepEquals
+                                     (into-array Object [val-a])
+                                     (into-array Object [val-b]))
+      (= Double/TYPE property-type) (== (.doubleValue val-a) (.doubleValue val-b))
+      (= Float/TYPE property-type) (== (.floatValue val-a) (.floatValue val-b))
+      :else (.equals val-a val-b))))
+
+(defn properties-equals?
+  "Compares properties of the two DTOs. Return `true` when equals."
+
+  [properties dto-a dto-b]
+  (reduce (fn [_ [p a b]]
+            (if-not (property-equals? p a b)
+              (reduced false)
+              true))
+          true
+          (map #(-> [%1 %2 %3]) properties dto-a dto-b)))
+  
 (defn handle-equals
   "Returns `true` if `@state` and the first value of `the-args` are
-   equal in terms of `java.util.Arrays/deepEquals`."
+   equal. Note that `double` and `float` typed properties are compared
+   via `=` (so `0.0 == -0.0`)."
 
-  [clazz state the-method the-args]
+  [properties clazz state the-method the-args]
   (let [the-args (into [] the-args)
         other (first the-args)]
     (cond 
@@ -293,8 +327,21 @@
       ;; this is brittle....is it?
       (not= [clazz java.io.Serializable Cloneable] (->> other .getClass .getInterfaces (into [])))
       false
+
+      ;; two ways to compare properties: one is based on just using
+      ;; java.util.Arrays/deepEquals which uses equals on array
+      ;; elements. That's fast and easy but will not consider double
+      ;; 0.0 being == to -0.0
+      ;;
+      ;; So there's the second (slower) way to compare properties via
+      ;; properties-equals?
       
-      :else 
+      :else ;; equals based on == for double/float
+      (properties-equals? properties
+                          @state
+                          (.invoke (java.lang.reflect.Proxy/getInvocationHandler other)
+                                   nil nil nil))
+      #_ ;; equals based on equals
       (let [s1 (into-array Object (vals @state))
             s2 (into-array Object (vals (.invoke
                                          (java.lang.reflect.Proxy/getInvocationHandler other)
@@ -380,7 +427,7 @@
               ;; evolves (insert/remove properties, change property
               ;; type)? Do we consider ALL properties or only the ones
               ;; which are part of the current DTOs contract?
-              (= "equals" method-name) (handle-equals clazz state the-method the-args)
+              (= "equals" method-name) (handle-equals properties clazz state the-method the-args)
 
               ;; consistent with equals(?) (TBD: serial form of DTOs
               ;; type evolves?)
@@ -417,9 +464,6 @@
                                      :the-method the-method
                                      :the-args (into [] the-args)}))))))
 
-(defn -init [v]
-  [[] v])
-  
 (defn -writeReplace [this]
   this)
 
