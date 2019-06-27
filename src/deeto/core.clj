@@ -111,6 +111,8 @@
                      :property-name property-name
                      :value value}))))
 
+;; ********************* reflection ********************************************************
+
 (defn falsy->nil [x]
   (or x nil))
                  
@@ -232,6 +234,8 @@
 (def reflect-on*
   (memoize reflect-on))
 
+;; ********************* proxying ********************************************************
+
 (declare handler)
 
 ;; https://i-proving.com/2008/02/11/the-pitfalls-of-dynamic-proxy-serialization/
@@ -278,6 +282,43 @@
         (.getClassLoader (first pt)) 
         pt
         (make-serializable-invocation-handler handler-fn (first pt))))))
+
+;; ********************* hashcode ********************************************************
+
+(defn properties-hashcode
+  "Returns hashcode of `dto` map. This function is (and must be)
+   consistent with `properties-equals?`. I.e. it has to take care of
+   the edge-cases `double`/`float` `0.0` and `-0.0` being __equal__.
+
+   Note: this function traverses into arrays for hashcode
+   calculation. We need not do that. We could just ignore arrays (save
+   time --> increase performance) and still have a valid/consistent
+   implementation. But clients would see more hash-collisions which
+   will increase lookup-time and thus hurt performance (remember:
+   you're pushing here, it's popping there). So we try our best and
+   deliver a good hash."
+
+  [properties dto]
+  (reduce
+   (fn [hashcode [[property-name {:keys [property-type]}] [prop val]]]
+     (let [h (cond
+               (nil? val) 0
+               (-> val .getClass .isArray) (java.util.Arrays/deepHashCode (into-array Object [val]))
+               (= Double/TYPE property-type) (-> val .doubleValue Math/abs Double/hashCode)
+               (= Float/TYPE property-type) (-> val .floatValue Math/abs Float/hashCode)
+               :else (.hashCode val))]
+       (+ h (* 31 hashcode h))))
+   0
+   (map #(-> [%1 %2]) properties dto)))
+
+(defn handle-hashcode
+  [properties state the-method the-args]
+  (let [the-args (into [] the-args)]
+    (if (not= [] the-args)
+      (throw (ex-info "Not a valid hashcode method" {:the-method the-method :the-args the-args}))
+      (properties-hashcode properties @state))))
+
+;; ********************* equals ********************************************************
 
 (defn property-equals?
   "Compares the two properties (name and value). `double` and `float`
@@ -429,9 +470,9 @@
               ;; which are part of the current DTOs contract?
               (= "equals" method-name) (handle-equals properties clazz state the-method the-args)
 
-              ;; consistent with equals(?) (TBD: serial form of DTOs
-              ;; type evolves?)
-              (= "hashCode" method-name) (java.util.Arrays/deepHashCode (into-array Object (vals @state)))
+              ;; (TBD: serial form of DTOs type evolves?)
+              (= "hashCode" method-name) (handle-hashcode properties state the-method the-args)
+              #_ (java.util.Arrays/deepHashCode (into-array Object (vals @state)))
 
               ;; Note: for clone we do **not** need to create a deep
               ;; copy - or any copy really! I.e. we can _re-use_
