@@ -23,10 +23,10 @@ factory will return a new instance `i` with the following properties:
 
 * `P`'s `boolean equals(Object o)` implementation (of `boolean
   Object.equals(Object)`) returns `true` if `o` and `i` are of the
-  __same `Class`__ and if all properties are
-  `Q.equals(Object)`. I.e. the `equals` semantics for `P` are
-  implemented in the _handler_ -- the `equals` semantics for each of
-  the properties are implemented in each properties' class `Q`.
+  __same `Class`__ and if all properties are `Q.equals(Object)`
+  [10]. I.e. the `equals` semantics for `P` are implemented in the
+  _handler_ -- the `equals` semantics for each of the properties are
+  implemented in each properties' class `Q`.
 
 * `P`'s `int hashCode()` implementation (of `int Object.hashCode()`)
   is consistent with `P`'s `boolean equals(Object)`
@@ -54,7 +54,9 @@ factory will return a new instance `i` with the following properties:
     value. This may change in future releases though.  
 [9] If `Q` is `boolean` (not `Boolean`!) getters of the form `boolean
   is<q>()` are also recognized.  
-	
+[10] See __Native-typed properties__ below for more detail on when two
+  DTOs are considered being equal.
+
 ## Properties
 
 Data transfer objects are __mutable containers__ -- used to transport
@@ -66,6 +68,9 @@ support the observer pattern and more.
 Deeto analyzes the interface `I` and derives the set of properties and
 their types. The _handler_ then implements the stateful
 get-and-set-semantics.
+
+On construction these properties are set to an __initialization
+value__ (see below).
 
 __Note:__ Deeto supports interface-definitions with only a getter or
 setter for a property even if those have limited usability. 
@@ -79,27 +84,51 @@ setter for a property even if those have limited usability.
 ## Native-typed properties
 
 Deeto supports native-typed properties (like `boolean` and
-`double`). Internally these values are stored as objects of their
+`double`). Internally these values are stored as instances of their
 wrapper classes (like `Boolean` and `Double`).
 
-Java has a mismatch when it comes to compare floating point values
-[1]. You have `0.0 == -0.0` is `true` but `new Double(-0.0).equals(new
+### floating point datatypes
+
+Java has a _mismatch_ when it comes to compare floating point values
+[1]. You have `0.0 = -0.0` is `true` but `new Double(-0.0).equals(new
 Double(0.0))` is `false`.
 
-So when using `float` and `double` typed properties remember that
-Deeto's `equals` logic is based on `equals` and not on `==`!
+So for the implementation of `equals(Object)` Deeto will compare
+native-typed (floating point) properties (`float` and `double`) via
+`=`. But for properties of the wrapper types (`Float` and `Double`)
+Deeto will use the type's `equals(Object)` method.
+
+This is probably closest to what a Java programmer would do, if she
+was asked to code an implementation for `equals(Object)` and the class
+had a `float`/`double` typed field.
 
 Special care must be taken when refactoring existing Java code which
-used to implement `equals` with `==` to using Deeto [2].
+does not follow this path.
+
+Note thet Deeto's implementation of `hashCode()` is consistent with
+these semantics.
 
 As a side note: notice that `Arrays.equals(new double[] { -0.0 }, new
-double[] { 0.0 })` is `false` which puzzles me but the Java docs for
+double[] { 0.0 })` is `false` which puzzles me. But the Java docs for
 `Arrays.equals(double[], double[])` say just that.
 
 [1] https://stackoverflow.com/questions/45544180/signed-zero-double-equals-as-in-but-double-comparedouble-double-0/45544483  
-[2] Deeto could implement a special treatment when comparing
-  natives. This feature has not been implemented yet though but will
-  be.
+
+### initialization of native-typed properties
+
+Java initializes reference-typed fields (incl. arrays) with `null`
+(i.e. `nil`). For native-typed fields (like `boolean` and `float`)
+Java defines an __initialization value__ for each type (see JLS 4.12.5
+_Initial Values of Variables_ [1]).
+
+Deeto mimics this behavior. So when constructing a DTO, properties
+will be _bound_ to their corresponding type's initialization value.
+
+Currently there is no way for clients to define this initialization
+value for Deeto's DTOs (like through an annotation or so). You'll have
+to put that logic into your factories (see below).
+
+[1] https://docs.oracle.com/javase/specs/jls/se7/html/jls-4.html#jls-4.12.5
 
 ## Fluent interface/builder pattern
 

@@ -41,6 +41,8 @@
     (catch Throwable t
       (throw (ex-info (str "Creating copy failed: " t) (object-info x) t)))))
 
+;; ********************* properties & values ***************************************
+
 (defn capitalize
   "Returns string argument with the first character converted to
    upper-case (Locale/ENGLISH). Note that `clojure.str/capitalize`
@@ -110,6 +112,33 @@
                      :state state
                      :property-name property-name
                      :value value}))))
+
+(defn initialization-value-for
+  "If `property-type` is a Java native data-type, returns a
+  corresponding wrapper-typed instance with the default-initialization
+  value (as of JLS 4.12.5) for the native type. Else returns
+  `nil` (which is the default-initialization value for reference-typed
+  fields in Java)"
+
+  [property-type]
+  ({Boolean/TYPE false
+    Byte/TYPE Byte (byte 0)
+    Character/TYPE (char 0)
+    Double/TYPE (double 0)
+    Float/TYPE Float (float 0)
+    Integer/TYPE (int 0)
+    Long/TYPE (long 0)
+    Short/TYPE (short 0)}
+   property-type))
+
+(defn new-instance-of
+  "Returns a map containing all keys of `properties` which map to the
+  default-initialization value of the property's `:property-type`."
+
+  [properties]
+  (into (sorted-map)
+        (for [[property-name {:keys [property-type]}] properties]
+          [property-name (initialization-value-for property-type)])))
 
 ;; ********************* reflection ********************************************************
 
@@ -270,8 +299,7 @@
   
   ([proxy-type]
      (let [properties (reflect-on* proxy-type)
-           state (atom (into (sorted-map)
-                             (map #(-> [% nil]) (keys properties))))]
+           state (atom (new-instance-of properties))]
        (make-proxy [proxy-type java.io.Serializable Cloneable]
                    (partial #'handler proxy-type properties state))))
   ([proxy-type handler-fn]
@@ -340,7 +368,9 @@
       :else (.equals val-a val-b))))
 
 (defn properties-equals?
-  "Compares properties of the two DTOs. Return `true` when equals."
+  "Compares properties of the two DTO maps. Return `true` when
+  equal. Comparison is done by comparing each property pairwise by
+  `property-equals?`."
 
   [properties dto-a dto-b]
   (reduce (fn [_ [p a b]]
@@ -472,7 +502,6 @@
 
               ;; (TBD: serial form of DTOs type evolves?)
               (= "hashCode" method-name) (handle-hashcode properties state the-method the-args)
-              #_ (java.util.Arrays/deepHashCode (into-array Object (vals @state)))
 
               ;; Note: for clone we do **not** need to create a deep
               ;; copy - or any copy really! I.e. we can _re-use_
@@ -485,6 +514,12 @@
               ;; values (which you need not clone). So all we do need
               ;; is a new proxy/mutable state container (with the
               ;; *same* value).
+              ;;
+              ;; Note: there is always a way for clients to supply
+              ;; classes which intentionally leak references to the
+              ;; outside. This you cannot prevent even with cloning
+              ;; and ser-de-ser. So we try our best to deliver a sane
+              ;; implementation.
               (= "clone" method-name)
               (make-proxy [clazz java.io.Serializable Cloneable]
                           (partial #'handler clazz properties (atom @state)))

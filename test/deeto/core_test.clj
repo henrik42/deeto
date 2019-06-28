@@ -72,7 +72,7 @@
 
 (deftest test-make-proxy
   (let [int-dto (make-proxy deeto.intDto)]
-    (is (= "{:type deeto.intDto, :value {\"Int\" nil, \"IntArray\" nil}}"
+    (is (= "{:type deeto.intDto, :value {\"Int\" 0, \"IntArray\" nil}}"
            (.toString int-dto)))))
 
 (deftest test-to-string
