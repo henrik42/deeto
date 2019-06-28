@@ -6,8 +6,10 @@ Deeto is a Clojure [1] library for Java developers. With Deeto you can
 define your data transfer object (DTO [2, 3]) types via __interfaces__
 in Java. You do __not need to implement these interfaces__. Instead
 you can ask Deeto to analyze (via reflection [4]) the interface class
-`I` and then give you a factory [5] for `I`. On each invovation this
-factory will return a new instance `i` with the following properties:
+`I` and then give you a factory [5] `Deeto.factory().newInstance(I)`
+for `I`. On each invovation this factory will return a new
+(__initializd__; see below) instance `i` with the following
+properties:
 
 * `i`'s class `P` is a Java dynamic proxy class [6] which implements
   `I`, `Cloneable` and `Serializable`.
@@ -26,7 +28,7 @@ factory will return a new instance `i` with the following properties:
   __same `Class`__ and if all properties are `Q.equals(Object)`
   [10]. I.e. the `equals` semantics for `P` are implemented in the
   _handler_ -- the `equals` semantics for each of the properties are
-  implemented in each properties' class `Q`.
+  implemented in each properties' class/type `Q`.
 
 * `P`'s `int hashCode()` implementation (of `int Object.hashCode()`)
   is consistent with `P`'s `boolean equals(Object)`
@@ -146,10 +148,10 @@ implementations for (_build-mutator_) methods of the form `I
   instance that the method was invoked on).
 
     interface SomeDto extends IDeeto<SomeDto> {
-
+    
         String getFoo();
         void setFoo(String x);
-		SomeDto foo(String x);
+        SomeDto foo(String x);
 
 With Deeto you're not using a seperate builder but you're using the
 stateful DTO directly. So all this feature gives you is the option to
@@ -464,6 +466,3 @@ Using `deeto.IDeeto` is totally optional for using Deeto.
 ## TODOS
 
 * add documentation about serial form
-* native-types properties are not "initialzed" and getting them throws
-  a NullPointerException.
-* say something about double/Double mismatch.
