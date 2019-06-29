@@ -98,7 +98,15 @@
           property-type))))
 
 (defn assoc-copy-of-value
-  ""
+  "Assocs the clone (as of `ser-de-ser`) of `value` into `dto-map`
+  with key `property-name`. Throws if `value` is not compatible with
+  the `:property-type` in `properties` for `property-name`.
+
+  Note that this function will __not throw__ when trying to assoc
+  `nil` on a native-typed property. That's because this function is
+  called only through Java methods that will not give `null`s to us
+  AND through assoc-copy-of-values which does the check for
+  native-typed properties."
   
   [dto-map properties property-name value]
   (if-let [{:keys [property-type]} (properties property-name)]
@@ -123,8 +131,11 @@
                      :value value}))))
 
 (defn assoc-copy-of-values
-  ""
-  
+  "Assocs `values` `([property-name property-value])` onto
+  `dto-map`. Throws if any of the values is not compatible with the
+  `:property-type` in `properties` for that `property-name`. This
+  includes `nil` values for native-typed properties."
+
   [dto-map properties values]
   (reduce (fn [res [property-name property-value]]
             (if (and (nil? property-value)
