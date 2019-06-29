@@ -116,6 +116,15 @@
     (.setIntArray int-dto-b (into-array Integer/TYPE [1 2]))
     (is (= true (.equals int-dto-a int-dto-b)))))
 
+(deftest test-clone
+  (let [int-array-a (into-array Integer/TYPE [1 2])
+        int-dto-a (doto (make-proxy deeto.intDto)
+                    (.setIntArray int-array-a))
+        int-dto-b (.clone int-dto-a)]
+    (is (.equals int-dto-a int-dto-b))
+    (is (.equals int-dto-b int-dto-a))
+    (is (= (.hashCode int-dto-a) (.hashCode int-dto-b)))))
+
 ;; Setters should clone argument values. So mutating the argument
 ;; (e.g. an array) after calling the setter should not change the dto.
 (deftest test-setter
@@ -125,18 +134,26 @@
                     (.setIntArray int-array-a))
         int-dto-b (doto (make-proxy deeto.intDto)
                     (.setIntArray int-array-b))]
-    (is (= true (.equals int-dto-a int-dto-b)))
+    
+    (is (.equals int-dto-a int-dto-b))
+    
     ;; apply mutator to int-array-1. If the setter took a clone/copy
     ;; of the array into its internal state, then this mutation should
     ;; have no side-effect on int-dto-a!!!
     (aset int-array-a 1 3)
     ;; dtos should be equal in the absence of side-effects
-    (is (= true (.equals int-dto-a int-dto-b)))
+    (is (.equals int-dto-a int-dto-b))
+
+    (aset (.getIntArray int-dto-a) 1 3)
+    ;; dtos should be equal in the absence of side-effects
+    (is (.equals int-dto-a int-dto-b))
+    
     ;; calling the setters should make them equal again
     (.setIntArray int-dto-a int-array-a)
-    (is (= false (.equals int-dto-a int-dto-b)))
+    (is (false? (.equals int-dto-a int-dto-b)))
+    
     (.setIntArray int-dto-b int-array-a)
-    (is (= true (.equals int-dto-a int-dto-b)))))
+    (is (.equals int-dto-a int-dto-b))))
 
 (deftest test-builder
   (let [string-dto (make-proxy deeto.StringDto)]

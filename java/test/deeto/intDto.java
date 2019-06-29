@@ -1,6 +1,6 @@
 package deeto;
 
-public interface intDto {
+public interface intDto extends IDeeto {
     int getInt();
     void setInt(int x);
     
