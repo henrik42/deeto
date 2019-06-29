@@ -104,8 +104,8 @@ This is probably closest to what a Java programmer would do, if she
 was asked to code an implementation for `equals(Object)` and the class
 had a `float`/`double` typed field.
 
-Special care must be taken when refactoring existing Java code which
-does not follow this path.
+Special care must be taken when introducing Deeto and refactoring
+existing Java code which does not follow this path.
 
 Note thet Deeto's implementation of `hashCode()` is consistent with
 these semantics.
@@ -255,19 +255,32 @@ The DTO's interface can/may also define
     <T> T fromMap(java.util.Map<String, Object> source);
 
 When this method is called on a Deeto proxy it will use the entries in
-`source` to set the property values of the instance on which the
-method was called. It then returns the (mutated) instance. So this is
-a __mutator__ and __not a factory__.
+`source` to set the property values (clones/copies of `source`'s
+values!) of the instance on which the method was called. It then
+returns the (mutated) instance. So this is a __mutator__ and __not a
+factory__.
+
+The `source` map need not contain all of the DTO's properties. If
+`source` contains keys for which there is no property in the DTO, an
+exception is thrown.
 
 Again you have to supply wrapper-typed values for properties with
-native type.
+native type. If a native-typed property value in `source` has `null`
+value, an exception is thrown [2].
 
 Note that this method throws an exception if any given value is not
 type-compatible (as of `assignableFrom`) with the corresponding
 property. Wrapper-types are handled as exspected. No other conversion,
 transformation, cast etc. is done though.
 
-[1] https://www.w3schools.com/java/java_wrapper_classes.asp
+Mutation of the DTO when consuming `source` is done __in one step__
+(just one assignment). If `fromMap` throws an exception the state
+which the DTO was in when the method was called will be unchanged (it
+won't change at all).
+
+[1] https://www.w3schools.com/java/java_wrapper_classes.asp  
+[2] Currently there is no way for clients to ask Deeto about whether a
+  given property (name) has a native data-type.
 
 ## Immutability
 

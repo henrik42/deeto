@@ -55,6 +55,24 @@
     (str (.toUpperCase (subs s 0 1) java.util.Locale/ENGLISH)
          (subs s 1))))
 
+(defn initialization-value-for
+  "If `property-type` is a Java native data-type, returns a
+  corresponding wrapper-typed instance with the default-initialization
+  value (as of JLS 4.12.5) for the native type. Else returns
+  `nil` (which is the default-initialization value for reference-typed
+  fields in Java)"
+
+  [property-type]
+  ({Boolean/TYPE false
+    Byte/TYPE Byte (byte 0)
+    Character/TYPE (char 0)
+    Double/TYPE (double 0)
+    Float/TYPE Float (float 0)
+    Integer/TYPE (int 0)
+    Long/TYPE (long 0)
+    Short/TYPE (short 0)}
+   property-type))
+
 (defn compatible-types?
   "Returns truthy if the `property-type` is assignable from the
    `value-type`.
@@ -73,14 +91,57 @@
            Byte/TYPE Byte
            Character/TYPE Character
            Double/TYPE Double
-           ;; Enums???
            Float/TYPE Float
            Integer/TYPE Integer
            Long/TYPE Long
-           Short/TYPE short
-           }
+           Short/TYPE short}
           property-type))))
 
+(defn assoc-copy-of-value
+  ""
+  
+  [dto-map properties property-name value]
+  (if-let [{:keys [property-type]} (properties property-name)]
+    (if (or (nil? value)
+            (compatible-types? property-type (.getClass value)))
+      (assoc dto-map property-name (ser-de-ser value))
+      (throw (ex-info (format "Incompatible value type '%s/%s' for property %s/%s"
+                              value
+                              (.getClass value)
+                              property-name
+                              property-type)
+                      {:properties properties
+                       :dto-map dto-map
+                       :property-name property-name
+                       :property-type property-type
+                       :value value
+                       :value-type (.getClass value)})))
+    (throw (ex-info (format "Unknown property-name '%s'." property-name)
+                    {:properties properties
+                     :dto-map dto-map
+                     :property-name property-name
+                     :value value}))))
+
+(defn assoc-copy-of-values
+  ""
+  
+  [dto-map properties values]
+  (reduce (fn [res [property-name property-value]]
+            (if (and (nil? property-value)
+                     (-> property-name
+                         properties
+                         initialization-value-for
+                         nil?
+                         not))
+              (throw (ex-info "null value for native-typed property"
+                              {:property-name property-name
+                               :properties properties
+                               :dto-map dto-map
+                               :values values}))
+              (assoc-copy-of-value res properties property-name property-value)))
+          dto-map
+          values))
+  
 (defn swap-state
   "Sets (swaps!) property `property-name` of map `@state` to the
    clone/deep-copy of `value`.
@@ -92,44 +153,7 @@
    type-compatible (as of `compatible-types?`) with `value`."
 
   [properties state property-name value]
-  (if-let [{:keys [property-type]} (properties property-name)]
-    (if (or (nil? value)
-            (compatible-types? property-type (.getClass value)))
-      (swap! state assoc property-name (ser-de-ser value))
-      (throw (ex-info (format "Incompatible value type '%s/%s' for property %s/%s"
-                              value
-                              (.getClass value)
-                              property-name
-                              property-type)
-                      {:properties properties
-                       :state state
-                       :property-name property-name
-                       :property-type property-type
-                       :value value
-                       :value-type (.getClass value)})))
-    (throw (ex-info (format "Unknown property-name '%s'." property-name)
-                    {:properties properties
-                     :state state
-                     :property-name property-name
-                     :value value}))))
-
-(defn initialization-value-for
-  "If `property-type` is a Java native data-type, returns a
-  corresponding wrapper-typed instance with the default-initialization
-  value (as of JLS 4.12.5) for the native type. Else returns
-  `nil` (which is the default-initialization value for reference-typed
-  fields in Java)"
-
-  [property-type]
-  ({Boolean/TYPE false
-    Byte/TYPE Byte (byte 0)
-    Character/TYPE (char 0)
-    Double/TYPE (double 0)
-    Float/TYPE Float (float 0)
-    Integer/TYPE (int 0)
-    Long/TYPE (long 0)
-    Short/TYPE (short 0)}
-   property-type))
+  (swap! state assoc-copy-of-value properties property-name value))
 
 (defn new-instance-of
   "Returns a map containing all keys of `properties` which map to the
@@ -480,12 +504,18 @@
               ;; state. So references in/to the argument value will
               ;; not become part of the internal state and thus do not
               ;; leak to the outside (see "clone" below)
+              ;;
+              ;; Note: no need to check for native-typed-not-nil
+              ;; because Java won't pass us nil in that case.
               set-property (swap-state properties state set-property (first the-args))
 
               ;; build-mutator acts like a setter but returns "this"
               ;; for method chaining. Note that we *could* return a
               ;; new instance BUT WE DO mutate. This is not a "factory
               ;; with an argument"
+              ;;
+              ;; Note: no need to check for native-typed-not-nil
+              ;; because Java won't pass us nil in that case.
               mutate-property (do
                                 (swap-state properties state mutate-property (first the-args))
                                 the-proxy)
@@ -529,9 +559,10 @@
               (= "toMap" method-name) (java.util.HashMap. (ser-de-ser @state))
 
               (= "fromMap" method-name)
+              ;; Save state so that we can restore in case of
+              ;; exception
               (do
-                (doseq [p (->> the-args first .entrySet (into []))]
-                  (swap-state properties state (.getKey p) (.getValue p)))
+                (reset! state (assoc-copy-of-values @state properties (first the-args)))
                 the-proxy)
               
               :else (throw (ex-info "Unknown invocation"
