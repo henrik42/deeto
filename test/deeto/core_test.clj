@@ -121,9 +121,30 @@
         int-dto-a (doto (make-proxy deeto.intDto)
                     (.setIntArray int-array-a))
         int-dto-b (.clone int-dto-a)]
+    ;; (println (str int-dto-a int-dto-b))
     (is (.equals int-dto-a int-dto-b))
     (is (.equals int-dto-b int-dto-a))
     (is (= (.hashCode int-dto-a) (.hashCode int-dto-b)))))
+
+(deftest test-hashcode
+  (let [double-dto-a (make-proxy deeto.DoubleDto)
+        double-dto-b (.clone double-dto-a)]
+    
+    (is (.equals double-dto-a double-dto-b))
+    (is (= (.hashCode double-dto-a) (.hashCode double-dto-b)))
+    
+    (.nativeDoubleProp double-dto-a -0.0)
+    
+    (is (.equals double-dto-a double-dto-b))
+    (is (= (.hashCode double-dto-a) (.hashCode double-dto-b)))))
+    
+(deftest test-is
+  (is (= {"BooleanProp" {:property-name "BooleanProp",
+                         :property-type Boolean/TYPE
+                         :property-mutator nil,
+                         :property-getter "isBooleanProp",
+                         :property-setter nil}}
+         (reflect-on deeto.BooleanDto))))
 
 ;; Setters should clone argument values. So mutating the argument
 ;; (e.g. an array) after calling the setter should not change the dto.
@@ -172,3 +193,4 @@
                        (.doubleProp 0.0)
                        (.nativeDoubleProp -0.0))]
     (is (= double-dto-a double-dto-b))))
+

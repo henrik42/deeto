@@ -64,10 +64,10 @@
 
   [property-type]
   ({Boolean/TYPE false
-    Byte/TYPE Byte (byte 0)
+    Byte/TYPE (byte 0)
     Character/TYPE (char 0)
     Double/TYPE (double 0)
-    Float/TYPE Float (float 0)
+    Float/TYPE (float 0)
     Integer/TYPE (int 0)
     Long/TYPE (long 0)
     Short/TYPE (short 0)}
@@ -359,7 +359,7 @@
                (= Double/TYPE property-type) (-> val .doubleValue Math/abs Double/hashCode)
                (= Float/TYPE property-type) (-> val .floatValue Math/abs Float/hashCode)
                :else (.hashCode val))]
-       (+ h (* 31 hashcode h))))
+       (int (+ h (* 31 hashcode h)))))
    0
    (map #(-> [%1 %2]) properties dto)))
 
