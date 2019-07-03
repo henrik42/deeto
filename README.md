@@ -419,7 +419,7 @@ Here is an example for Spring's `BeanUtil` [2]:
             return Deeto.factory().newInstance(HelloWorld.class);
         }
 
-    public static void main(String[] args) {
+        public static void main(String[] args) {
 
             System.out.println("Hello " + newInstance().name("World"));
 
