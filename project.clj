@@ -17,7 +17,8 @@
   :plugins [[lein-swank "1.4.5"]]
     
   :aliases {"deploy" ["do" "clean," "deploy"]}
-  :release-tasks [["vcs" "assert-committed"]
+  :release-tasks [["test"]
+                  ["vcs" "assert-committed"]
                   ["change" "version"
                    "leiningen.release/bump-version" "release"]
                   ["vcs" "commit"]
