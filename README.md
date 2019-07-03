@@ -2,6 +2,33 @@
 
 __A Java dynamic proxy factory for interface-typed data transfer objects__
 
+# Quick start
+
+See __Usage__ below for the details.
+
+    package deeto_user;
+
+    import deeto.Deeto;
+
+    public interface HelloWorld {
+
+        HelloWorld name(String x);
+
+        static HelloWorld newInstance() {
+            return Deeto.factory().newInstance(HelloWorld.class);
+        }
+
+        public static void main(String[] args) {
+            System.out.println("Hello " + newInstance().name("World"));
+        }
+    }
+
+Gives you:
+
+	Hello {:type deeto_user.HelloWorld, :value {"Name" "World"}}
+
+# Long story
+
 Deeto is a Clojure [1] library for Java developers. With Deeto you can
 define your data transfer object (DTO [2, 3]) types via __interfaces__
 in Java. You do __not need to implement these interfaces__. Instead
