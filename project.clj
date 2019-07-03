@@ -16,29 +16,18 @@
   :dependencies [[org.clojure/clojure "1.8.0"]]
   :plugins [[lein-swank "1.4.5"]]
     
-  :aliases {"deploy" ["do" "clean," "deploy"]
-            "release" ["do"
-                       ["test"]
-                       ["vcs" "assert-committed"]
-                       ["change" "version"
-                        "leiningen.release/bump-version" "release"]
-                       ["vcs" "commit"]
-                       ["vcs" "tag" "--no-sign"]
-                       ["deploy"]
-                       ["change" "version" "leiningen.release/bump-version"]
-                       ["vcs" "commit"]
-                       ["deploy"]]}
+  :aliases {"deploy" ["do" "clean," "deploy"]}
             
-  :--release-tasks [["test"]
+  :release-tasks [["test"]
                   ["vcs" "assert-committed"]
                   ["change" "version"
                    "leiningen.release/bump-version" "release"]
                   ["vcs" "commit"]
                   ["vcs" "tag" "--no-sign"]
-                  ["deploy"]
+                  #_ ["deploy"]
                   ["change" "version" "leiningen.release/bump-version"]
                   ["vcs" "commit"]
-                  ["deploy"]
+                  #_ ["deploy"]
                   #_ ["vcs" "push"]]
 
   :profiles {;; run a local Nexus in a docker container with:
