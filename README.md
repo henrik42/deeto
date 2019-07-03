@@ -12,7 +12,7 @@ for `I`. On each invovation this factory will return a new
 properties:
 
 * `i`'s class `P` is a Java dynamic proxy class [6] which implements
-  `I`, `Cloneable` and `Serializable`.
+  `I`, `Cloneable` and `Serializable` [11].
 
 * `i` uses a (Clojure based) invocation _handler_. This _handler_ will
   process method invocations on `i`. `i`'s _handler_ is
@@ -57,7 +57,18 @@ properties:
 [9] If `Q` is `boolean` (not `Boolean`!) getters of the form `boolean
   is<q>()` are also recognized.  
 [10] See __Native-typed properties__ below for more detail on when two
-  DTOs are considered being equal.
+  DTOs are considered being equal.  
+[11] Deeto uses the Java serialization mechanism internally to create
+  deep-copies of instances and it exposes DTO implementations which
+  are `Serializable`. Note that serialization or rather
+  de-serialization introduces a security risk! [12, 13] That's why
+  Clojure's `proxy` does not support `Serializable`. Deeto has
+  `deeto.SerializableInvocationHandler` (see `core.clj`) to
+  (de-)serialize the DTOs. You must ensure, to ever only consume
+  (i.e. de-serialize) data from a __trusted__ source. Make sure you
+  understand the threat before consuming serialized data.  
+[12] https://clojure.atlassian.net/browse/CLJ-2204  
+[13] https://www.infoworld.com/article/3003197/library-misuse-exposes-leading-java-platforms-to-attack.html  
 
 ## Properties
 
