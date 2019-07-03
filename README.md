@@ -466,7 +466,7 @@ For Maven users (you need to add clojars to your SNAPSHOT repos):
 	<dependency>
 	  <groupId>deeto</groupId>
 	  <artifactId>deeto</artifactId>
-	  <version>0.1.0-SNAPSHOT</version>
+	  <version>0.1.0</version>
 	</dependency>
 
 In your Java code you define an interface for your DTO (`SomeDto`)
