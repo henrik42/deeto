@@ -399,7 +399,49 @@ Java tools for that [1]:
 * https://orika-mapper.github.io/orika-docs/
 * https://github.com/jmapper-framework/jmapper-core
 
-[1] https://www.baeldung.com/java-performance-mapping-frameworks
+Here is an example for Spring's `BeanUtil` [2]:
+
+    package deeto_user;
+
+    import java.util.Arrays;
+    import org.springframework.beans.BeanUtils;
+    import deeto.Deeto;
+
+    public interface HelloWorld {
+
+        HelloWorld name(String x);
+
+        HelloWorld fooBar(String x);
+        void setFooBar(String x);
+        String getFooBar();
+
+        static HelloWorld newInstance() {
+            return Deeto.factory().newInstance(HelloWorld.class);
+        }
+
+    public static void main(String[] args) {
+
+            System.out.println("Hello " + newInstance().name("World"));
+
+            System.out.println(Arrays.asList(BeanUtils.getPropertyDescriptors(HelloWorld.class)));
+
+            HelloWorld foo = newInstance().fooBar("FOO");
+            System.out.println(foo);
+
+            HelloWorld bar = newInstance().fooBar("BAR");
+
+            BeanUtils.copyProperties(bar, foo);
+            System.out.println(foo);
+
+        }
+    }
+
+Note that Spring does not recognize `name(String)` and
+`fooBar(String)` as (non-standard) setters. So for this example to
+work, we have to define `setFooBar(String)` and `getFooBar()`.
+
+[1] https://www.baeldung.com/java-performance-mapping-frameworks  
+[2] https://docs.spring.io/spring/docs/5.1.8.RELEASE/spring-framework-reference/core.html#beans-beans
 
 ## Performance
 
