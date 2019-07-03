@@ -20,8 +20,14 @@
             "release" ["do"
                        ["test"]
                        ["vcs" "assert-committed"]
+                       ["change" "version"
+                        "leiningen.release/bump-version" "release"]
+                       ["vcs" "commit"]
+                       ["vcs" "tag" "--no-sign"]
+                       ["deploy"]
+                       ["change" "version" "leiningen.release/bump-version"]
+                       ["vcs" "commit"]
                        ["deploy"]]}
-
             
   :--release-tasks [["test"]
                   ["vcs" "assert-committed"]
