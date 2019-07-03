@@ -16,8 +16,14 @@
   :dependencies [[org.clojure/clojure "1.8.0"]]
   :plugins [[lein-swank "1.4.5"]]
     
-  :aliases {"deploy" ["do" "clean," "deploy"]}
-  :release-tasks [["test"]
+  :aliases {"deploy" ["do" "clean," "deploy"]
+            "release" ["do"
+                       ["test"]
+                       ["vcs" "assert-committed"]
+                       ["deploy"]]}
+
+            
+  :--release-tasks [["test"]
                   ["vcs" "assert-committed"]
                   ["change" "version"
                    "leiningen.release/bump-version" "release"]
